@@ -3,6 +3,17 @@ import 'package:intl/intl.dart';
 /// Tutarın ekranda nasıl yazılacağı: `₺1.234,50` ya da `1.234,50 TL`.
 enum CurrencyStyle { symbol, code }
 
+/// Tutar görünümü tercihinin SharedPreferences anahtarı.
+const currencyStylePrefKey = 'currency_style';
+
+/// Kayıtlı tercihi okur; yoksa ya da bozuksa `symbol`.
+CurrencyStyle currencyStyleFromName(String? name) {
+  for (final s in CurrencyStyle.values) {
+    if (s.name == name) return s;
+  }
+  return CurrencyStyle.symbol;
+}
+
 final _number = NumberFormat('#,##0.00', 'tr_TR');
 
 /// Kuruş cinsinden tutarı Türkçe biçimde yazar.

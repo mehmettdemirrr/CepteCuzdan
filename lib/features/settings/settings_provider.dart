@@ -20,7 +20,7 @@ class SettingsProvider extends ChangeNotifier {
       );
 
   static const themeKey = 'theme_mode';
-  static const currencyKey = 'currency_style';
+  static const currencyKey = currencyStylePrefKey;
 
   final SharedPreferences _prefs;
   ThemeMode _themeMode;

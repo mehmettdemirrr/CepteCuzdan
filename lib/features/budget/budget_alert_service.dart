@@ -30,8 +30,20 @@ class BudgetAlertService {
 
   static const keyPrefix = 'alert_';
 
-  Future<void> checkMonth(DateTime anyDayInMonth) async {
+  Future<void> _queue = Future.value();
+
+  /// Kontroller sırayla çalışır; aynı anda iki kontrol (ör. bütçe kaydı ve
+  /// işlem ekleme) aynı bildirimi iki kez göndermesin.
+  Future<void> checkMonth(DateTime anyDayInMonth) {
+    final run = _queue.then((_) => _check(anyDayInMonth));
+    _queue = run.catchError((Object e) => debugPrint('Bütçe kontrolü: $e'));
+    return run;
+  }
+
+  Future<void> _check(DateTime anyDayInMonth) async {
     final month = monthKey(anyDayInMonth);
+    final style = currencyStyleFromName(prefs.getString(currencyStylePrefKey));
+    String fmt(int k) => formatKurus(k, style: style);
     final lines = await budgetLinesFor(month, budgets: budgets, txs: txs);
     if (lines.isEmpty) return;
     final names = {for (final c in await categories.all()) c.id: c.name};
@@ -53,23 +65,25 @@ class BudgetAlertService {
         case BudgetLevel.warning:
           await prefs.remove(exceededKey);
           if (!prefs.containsKey(warningKey)) {
+            // Kayıt önce yazılır: bildirim gösterilirken başka bir kontrol
+            // aynı uyarıyı tekrar göndermesin.
+            await prefs.setBool(warningKey, true);
             await _show(
               id: (categoryId ?? 0) * 10 + 1,
               title: 'Bütçe uyarısı',
               body:
                   "$name limitinin %80'ine ulaştın: "
-                  '${formatKurus(line.spent)} / ${formatKurus(limit)}',
+                  '${fmt(line.spent)} / ${fmt(limit)}',
             );
-            await prefs.setBool(warningKey, true);
           }
         case BudgetLevel.exceeded:
           if (!prefs.containsKey(exceededKey)) {
+            await prefs.setBool(exceededKey, true);
             await _show(
               id: (categoryId ?? 0) * 10 + 2,
               title: 'Bütçe aşıldı',
-              body: '$name limitini ${formatKurus(-line.remaining)} aştın',
+              body: '$name limitini ${fmt(-line.remaining)} aştın',
             );
-            await prefs.setBool(exceededKey, true);
           }
           // Aşımdan sonra %80 uyarısı ayrıca gelmesin.
           await prefs.setBool(warningKey, true);

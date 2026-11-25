@@ -118,4 +118,20 @@ void main() {
     await service.checkMonth(day);
     expect(notifier.shown, hasLength(1));
   });
+
+  test('aynı anda çalışan iki kontrol tek bildirim gönderir', () async {
+    await spend(85000);
+    await Future.wait([service.checkMonth(day), service.checkMonth(day)]);
+    expect(notifier.shown, hasLength(1));
+  });
+
+  test('bildirim metni tutar görünümü ayarına uyar', () async {
+    await service.prefs.setString('currency_style', 'code');
+    await spend(85000);
+    await service.checkMonth(day);
+    expect(
+      notifier.shown.single.body,
+      "Market limitinin %80'ine ulaştın: 850,00 TL / 1.000,00 TL",
+    );
+  });
 }
