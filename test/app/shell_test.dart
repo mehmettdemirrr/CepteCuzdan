@@ -4,16 +4,20 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('kabuk 4 sekmeyi gösterir ve sekme değiştirir', (t) async {
-    await t.pumpWidget(MaterialApp(
-      home: AppShell(pages: [
-        for (final k in ['home', 'assistant', 'transactions', 'reports'])
-          ColoredBox(
-            key: Key('tab-$k'),
-            color: Colors.white,
-            child: const SizedBox.expand(),
-          ),
-      ]),
-    ));
+    await t.pumpWidget(
+      MaterialApp(
+        home: AppShell(
+          pages: [
+            for (final k in ['home', 'assistant', 'transactions', 'reports'])
+              ColoredBox(
+                key: Key('tab-$k'),
+                color: Colors.white,
+                child: const SizedBox.expand(),
+              ),
+          ],
+        ),
+      ),
+    );
 
     for (final l in ['Ana Sayfa', 'Asistan', 'İşlemler', 'Raporlar']) {
       expect(find.text(l), findsOneWidget);
