@@ -1,4 +1,5 @@
 import 'package:cepte_cuzdan/app/providers.dart';
+import 'package:cepte_cuzdan/core/repositories/transaction_repository.dart';
 import 'package:cepte_cuzdan/core/ui/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -12,7 +13,13 @@ import '../fakes/fake_repositories.dart';
 
 /// Widget testleri için sahte bağımlılıklar.
 class TestDeps {
-  TestDeps({this.initialPrefs = const {}});
+  TestDeps({this.initialPrefs = const {}, this.resetData, this.txsOverride});
+
+  /// Verilirse veri sıfırlama bunu çağırır (hata senaryoları için).
+  final Future<void> Function()? resetData;
+
+  /// Verilirse işlem repository'si yerine kullanılır (hata senaryoları için).
+  final TransactionRepository? txsOverride;
 
   final repos = FakeRepos();
   final notifier = FakeAlertNotifier();
@@ -28,13 +35,13 @@ class TestDeps {
   Future<AppDeps> build() async {
     SharedPreferences.setMockInitialValues(initialPrefs);
     return AppDeps(
-      txs: txs,
+      txs: txsOverride ?? txs,
       categories: categories,
       budgets: budgets,
       chats: chats,
       notifier: notifier,
       prefs: await SharedPreferences.getInstance(),
-      resetData: repos.reset,
+      resetData: resetData ?? repos.reset,
     );
   }
 }

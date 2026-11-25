@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/format/money.dart';
-import '../budget/budget_alert_service.dart';
 import '../transactions/category_management_screen.dart';
 import '../transactions/category_provider.dart';
 import '../transactions/transaction_provider.dart';
@@ -43,14 +41,18 @@ class SettingsScreen extends StatelessWidget {
     if (ok != true || !context.mounted) return;
 
     final reset = context.read<DataResetter>();
-    final prefs = context.read<SharedPreferences>();
     final txs = context.read<TransactionProvider>();
     final categories = context.read<CategoryProvider>();
     final messenger = ScaffoldMessenger.of(context);
 
-    await reset();
-    for (final key in prefs.getKeys().toList()) {
-      if (key.startsWith(BudgetAlertService.keyPrefix)) await prefs.remove(key);
+    try {
+      await reset();
+    } catch (e) {
+      debugPrint('Veri sıfırlama başarısız: $e');
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Veriler sıfırlanamadı')),
+      );
+      return;
     }
     await categories.load();
     txs.markChanged();

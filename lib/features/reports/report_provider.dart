@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 
 import '../../core/format/dates.dart';
 import '../../core/repositories/transaction_repository.dart';
@@ -32,6 +32,11 @@ class ReportProvider extends ChangeNotifier {
   DateRange get range => _range;
   int? get categoryId => _categoryId;
   ReportData? get data => _data;
+
+  Object? _error;
+
+  /// Son yükleme hata verdiyse hata; başarılı yüklemede temizlenir.
+  Object? get error => _error;
 
   /// Haftalık ve aylıkta bugünün dönemine döner. Özel aralık
   /// [setCustomRange] ile seçilir.
@@ -77,18 +82,25 @@ class ReportProvider extends ChangeNotifier {
     final range = _range;
     final categoryId = _categoryId;
     final previousRange = previousOf(range);
-    final current = await txs.summarize(range);
-    final previous = await txs.summarize(previousRange);
-    final list = await txs.query(range: range, categoryId: categoryId);
-    if (_disposed || generation != _generation) return;
-    _data = ReportData(
-      range: range,
-      previousRange: previousRange,
-      current: current,
-      previous: previous,
-      transactions: list,
-      categoryId: categoryId,
-    );
+    try {
+      final current = await txs.summarize(range);
+      final previous = await txs.summarize(previousRange);
+      final list = await txs.query(range: range, categoryId: categoryId);
+      if (_disposed || generation != _generation) return;
+      _data = ReportData(
+        range: range,
+        previousRange: previousRange,
+        current: current,
+        previous: previous,
+        transactions: list,
+        categoryId: categoryId,
+      );
+      _error = null;
+    } catch (e) {
+      if (_disposed || generation != _generation) return;
+      debugPrint('Rapor yüklenemedi: $e');
+      _error = e;
+    }
     notifyListeners();
   }
 

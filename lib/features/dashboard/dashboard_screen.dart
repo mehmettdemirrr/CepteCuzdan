@@ -17,10 +17,33 @@ import 'dashboard_provider.dart';
 
 /// Ana Sayfa: bu ayın geliri, gideri, kalan bütçesi, kategori dağılımı ve
 /// son işlemler.
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
   static final _monthTitle = DateFormat('MMMM y', 'tr_TR');
+
+  // Uygulama arka plandan dönünce yeniden yükle: ay değişmiş ya da başka bir
+  // yerden veri eklenmiş olabilir.
+  late final _lifecycle = AppLifecycleListener(
+    onResume: () => context.read<DashboardProvider>().load(),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle;
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +56,16 @@ class DashboardScreen extends StatelessWidget {
         ),
       ),
       body: data == null
-          ? const Center(child: CircularProgressIndicator())
+          ? (p.error != null
+                ? EmptyState(
+                    icon: Icons.error_outline,
+                    message: 'Veriler yüklenemedi',
+                    action: FilledButton(
+                      onPressed: p.load,
+                      child: const Text('Tekrar dene'),
+                    ),
+                  )
+                : const Center(child: CircularProgressIndicator()))
           : RefreshIndicator(
               onRefresh: p.load,
               child: ListView(

@@ -147,7 +147,16 @@ class ReportScreen extends StatelessWidget {
             onChanged: p.setCategory,
           ),
           const SizedBox(height: 16),
-          if (data == null)
+          if (data == null && p.error != null)
+            EmptyState(
+              icon: Icons.error_outline,
+              message: 'Veriler yüklenemedi',
+              action: FilledButton(
+                onPressed: p.load,
+                child: const Text('Tekrar dene'),
+              ),
+            )
+          else if (data == null)
             const Padding(
               padding: EdgeInsets.all(32),
               child: Center(child: CircularProgressIndicator()),

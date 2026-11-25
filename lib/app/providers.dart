@@ -79,7 +79,9 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
       Provider<ChatMessageRepository>.value(value: deps.chats),
       Provider<SharedPreferences>.value(value: deps.prefs),
       Provider<BudgetAlertService>.value(value: alerts),
-      Provider<DataResetter>.value(value: DataResetter(deps.resetData)),
+      Provider<DataResetter>.value(
+        value: DataResetter(reset: deps.resetData, prefs: deps.prefs),
+      ),
       ChangeNotifierProvider(create: (_) => SettingsProvider(deps.prefs)),
       // AmountText bunu okur (çekirdek katman ayarlara bağımlı olmasın diye).
       ProxyProvider<SettingsProvider, CurrencyStyle>(

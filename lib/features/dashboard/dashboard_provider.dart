@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 
 import '../../core/format/dates.dart';
 import '../../core/models/period_summary.dart';
@@ -59,30 +59,44 @@ class DashboardProvider extends ChangeNotifier {
   bool _disposed = false;
   int _generation = 0;
 
+  Object? _error;
+
   DashboardData? get data => _data;
   bool get loading => _loading;
 
+  /// Son yükleme hata verdiyse hata; başarılı yüklemede temizlenir.
+  Object? get error => _error;
+
+  /// Ay her yüklemede saatten hesaplanır; uygulamaya geri dönülünce de
+  /// çağrılır (ay değişmiş olabilir).
   Future<void> load() async {
     final generation = ++_generation;
     _loading = true;
-    final now = clock();
-    final range = monthOf(now);
-    final summary = await txs.summarize(range);
-    final lines = await budgetLinesFor(
-      monthKey(now),
-      budgets: budgets,
-      txs: txs,
-      summary: summary,
-    );
-    final recent = await txs.query(limit: 5);
-    // Arada daha yeni bir yükleme başladıysa bu sonucu at.
-    if (_disposed || generation != _generation) return;
-    _data = DashboardData(
-      month: range.start,
-      summary: summary,
-      budgetLines: lines,
-      recent: recent,
-    );
+    try {
+      final now = clock();
+      final range = monthOf(now);
+      final summary = await txs.summarize(range);
+      final lines = await budgetLinesFor(
+        monthKey(now),
+        budgets: budgets,
+        txs: txs,
+        summary: summary,
+      );
+      final recent = await txs.query(limit: 5);
+      // Arada daha yeni bir yükleme başladıysa bu sonucu at.
+      if (_disposed || generation != _generation) return;
+      _data = DashboardData(
+        month: range.start,
+        summary: summary,
+        budgetLines: lines,
+        recent: recent,
+      );
+      _error = null;
+    } catch (e) {
+      if (_disposed || generation != _generation) return;
+      debugPrint('Dashboard yüklenemedi: $e');
+      _error = e;
+    }
     _loading = false;
     notifyListeners();
   }
