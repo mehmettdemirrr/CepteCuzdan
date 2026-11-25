@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import '../core/ui/app_theme.dart';
 import 'shell.dart';
 
 class CepteCuzdanApp extends StatelessWidget {
@@ -11,6 +12,8 @@ class CepteCuzdanApp extends StatelessWidget {
     return MaterialApp(
       title: 'CepteCüzdan',
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
       locale: const Locale('tr', 'TR'),
       supportedLocales: const [Locale('tr', 'TR')],
       localizationsDelegates: const [
