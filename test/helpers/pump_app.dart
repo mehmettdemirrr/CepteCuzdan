@@ -38,6 +38,10 @@ class TestDeps {
 /// [child]'ı uygulamanın teması ve Türkçe yerelleştirmesiyle sarar. [deps]
 /// verilirse uygulamanın provider ağacı sahte repository'lerle kurulur.
 Future<void> pumpApp(WidgetTester t, Widget child, {TestDeps? deps}) async {
+  // Gerçekçi telefon ekranı: 360×800 mantıksal piksel.
+  t.view.physicalSize = const Size(1080, 2400);
+  t.view.devicePixelRatio = 3;
+  addTearDown(t.view.reset);
   await initializeDateFormatting('tr_TR');
   Intl.defaultLocale = 'tr_TR';
   Widget app = MaterialApp(

@@ -56,6 +56,14 @@ void main() {
     });
   });
 
+  group('formatKurusInput', () {
+    test('form alanı için ₺ işaretsiz yazar ve geri okunabilir', () {
+      expect(formatKurusInput(32000), '320,00');
+      expect(formatKurusInput(123450), '1.234,50');
+      expect(parseTlToKurus(formatKurusInput(123450)), 123450);
+    });
+  });
+
   group('tlToKurus', () {
     test('kayan nokta hatasını yuvarlayarak giderir', () {
       expect(tlToKurus(320.00), 32000);

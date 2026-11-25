@@ -15,6 +15,10 @@ String formatKurus(int kurus, {CurrencyStyle style = CurrencyStyle.symbol}) {
   };
 }
 
+/// Form alanına yazmak için ₺ işaretsiz biçim: `1.234,50`.
+/// [parseTlToKurus] ile geri okunabilir.
+String formatKurusInput(int kurus) => _number.format(kurus / 100);
+
 final _digits = RegExp(r'^\d+$');
 final _grouped = RegExp(r'^\d{1,3}(\.\d{3})+$');
 final _dotDecimal = RegExp(r'^(\d+)\.(\d{1,2})$');
