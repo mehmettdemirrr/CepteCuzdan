@@ -2,6 +2,7 @@
 // test/core/repositories/repository_contract.dart ile SQLite
 // implementasyonuna eşitlenmiştir (fake_repositories_test.dart).
 import 'package:cepte_cuzdan/core/format/dates.dart';
+import 'package:cepte_cuzdan/core/format/text.dart';
 import 'package:cepte_cuzdan/core/models/budget.dart';
 import 'package:cepte_cuzdan/core/models/category.dart';
 import 'package:cepte_cuzdan/core/models/chat_message.dart';
@@ -178,13 +179,11 @@ class FakeCategoryRepository implements CategoryRepository {
   Future<Category?> findByName(String name, TxType type) async {
     final ofType = _s.categories.where((c) => c.type == type);
     return ofType.where((c) => c.name == name).firstOrNull ??
-        ofType
-            .where((c) => c.name.toLowerCase() == name.toLowerCase())
-            .firstOrNull;
+        ofType.where((c) => foldTr(c.name) == foldTr(name)).firstOrNull;
   }
 
   bool _taken(String name, TxType type, {int? exceptId}) => _s.categories.any(
-    (c) => c.name == name && c.type == type && c.id != exceptId,
+    (c) => foldTr(c.name) == foldTr(name) && c.type == type && c.id != exceptId,
   );
 
   @override

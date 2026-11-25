@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../format/text.dart';
 import '../models/category.dart';
 import '../models/default_categories.dart';
 import '../models/enums.dart';
@@ -24,13 +25,19 @@ class SqliteCategoryRepository implements CategoryRepository {
   Future<Category?> findByName(String name, TxType type) async {
     final ofType = await all(type: type);
     return ofType.where((c) => c.name == name).firstOrNull ??
-        ofType
-            .where((c) => c.name.toLowerCase() == name.toLowerCase())
-            .firstOrNull;
+        ofType.where((c) => foldTr(c.name) == foldTr(name)).firstOrNull;
+  }
+
+  /// Aynı tipte, Türkçe büyük/küçük harf duyarsız aynı adlı başka kategori.
+  Future<void> _ensureUnique(Category c) async {
+    final clash = (await all(type: c.type))
+        .any((x) => x.id != c.id && foldTr(x.name) == foldTr(c.name));
+    if (clash) throw DuplicateCategoryException(c.name);
   }
 
   @override
   Future<int> add(Category c) async {
+    await _ensureUnique(c);
     try {
       return await _db.insert('categories', c.toMap()..remove('id'));
     } on DatabaseException catch (e) {
@@ -41,6 +48,7 @@ class SqliteCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> update(Category c) async {
+    await _ensureUnique(c);
     try {
       await _db.update(
         'categories',

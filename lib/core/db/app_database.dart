@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -9,7 +10,9 @@ class AppDatabase {
   AppDatabase._();
 
   static const fileName = 'ceptecuzdan.db';
-  static const version = 1;
+
+  /// 1: ilk şema. 2: bütçe tekilliği için `idx_budgets_month_category`.
+  static const version = 2;
 
   /// [factory] verilmezse sqflite'ın platform fabrikası kullanılır. Testler
   /// `databaseFactoryFfi` ve `inMemoryDatabasePath` geçer.
@@ -29,6 +32,7 @@ class AppDatabase {
         singleInstance: singleInstance,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: _create,
+        onUpgrade: _upgrade,
       ),
     );
   }
@@ -47,7 +51,7 @@ class AppDatabase {
 
   static Future<void> _create(Database db, int version) async {
     final batch = db.batch();
-    for (final sql in _schema) {
+    for (final sql in [..._schemaV1, ..._migrationV2]) {
       batch.execute(sql);
     }
     for (final c in defaultCategories) {
@@ -56,7 +60,38 @@ class AppDatabase {
     await batch.commit(noResult: true);
   }
 
-  static const _schema = [
+  /// Eski sürümden yükseltme. Yeni bir şema değişikliğinde [version]
+  /// artırılır ve buraya `if (oldVersion < N)` adımı eklenir.
+  static Future<void> _upgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2) {
+      for (final sql in _migrationV2) {
+        await db.execute(sql);
+      }
+    }
+  }
+
+  /// Yalnızca geçiş testleri için: sürüm 1 şemasını kurar.
+  @visibleForTesting
+  static Future<void> createSchemaV1ForTest(Database db) async {
+    for (final sql in _schemaV1) {
+      await db.execute(sql);
+    }
+    for (final c in defaultCategories) {
+      await db.insert('categories', c.toMap());
+    }
+  }
+
+  /// Genel bütçe (category_id NULL) dahil, ay başına tek limit.
+  static const _migrationV2 = [
+    'CREATE UNIQUE INDEX idx_budgets_month_category '
+        'ON budgets(month, IFNULL(category_id, 0))',
+  ];
+
+  static const _schemaV1 = [
     '''
 CREATE TABLE categories(
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:cepte_cuzdan/core/db/app_database.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -70,6 +73,63 @@ void main() {
       throwsA(isA<DatabaseException>()),
     );
   });
+
+  test(
+    'aynı ay için ikinci genel bütçe ya da kategori limiti eklenemez',
+    () async {
+      await db.insert('budgets', {'month': '2026-11', 'limit_amount': 100});
+      expect(
+        () => db.insert('budgets', {'month': '2026-11', 'limit_amount': 200}),
+        throwsA(isA<DatabaseException>()),
+      );
+      await db.insert('budgets', {
+        'category_id': 1,
+        'month': '2026-11',
+        'limit_amount': 100,
+      });
+      expect(
+        () => db.insert('budgets', {
+          'category_id': 1,
+          'month': '2026-11',
+          'limit_amount': 5,
+        }),
+        throwsA(isA<DatabaseException>()),
+      );
+      await db.insert('budgets', {
+        'category_id': 1,
+        'month': '2026-12',
+        'limit_amount': 100,
+      });
+    },
+  );
+
+  test(
+    'sürüm 1 veritabanı açılınca bütçe indeksi eklenir, veriler korunur',
+    () async {
+      final dir = await Directory.systemTemp.createTemp('cepte_');
+      final path = '${dir.path}/v1.db';
+      final v1 = await databaseFactoryFfi.openDatabase(path);
+      await v1.execute('DROP INDEX IF EXISTS idx_budgets_month_category');
+      await AppDatabase.createSchemaV1ForTest(v1);
+      await v1.insert('budgets', {'month': '2026-11', 'limit_amount': 100});
+      await v1.setVersion(1);
+      await v1.close();
+
+      final upgraded = await AppDatabase.open(
+        factory: databaseFactoryFfi,
+        path: path,
+        singleInstance: false,
+      );
+      final idx = await upgraded.rawQuery(
+        "SELECT name FROM sqlite_master WHERE name = 'idx_budgets_month_category'",
+      );
+      expect(idx, hasLength(1));
+      expect(await upgraded.query('budgets'), hasLength(1));
+      expect(await upgraded.getVersion(), AppDatabase.version);
+      await upgraded.close();
+      await dir.delete(recursive: true);
+    },
+  );
 
   test('varsayılan kategoriler tek kez eklenir', () async {
     final rows = await db.rawQuery(

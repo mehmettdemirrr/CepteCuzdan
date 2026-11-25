@@ -59,6 +59,8 @@ int? parseTlToKurus(String input) {
     return null;
   }
 
+  // 12 haneden uzun tutarlar (999 milyar TL üstü) int taşmasına yol açar.
+  if (intPart.length > 12) return null;
   final whole = int.tryParse(intPart);
   if (whole == null) return null;
   final kurus = whole * 100 + int.parse(frac.padRight(2, '0'));

@@ -90,6 +90,38 @@ void runRepositoryContract(String label, Future<RepoSet> Function() open) {
         expect(incomeOther?.type, TxType.income);
       });
 
+      test('findByName Türkçe büyük harfi eşleştirir', () async {
+        expect(
+          (await r.categories.findByName('SAĞLIK', TxType.expense))?.name,
+          'Sağlık',
+        );
+        expect(
+          (await r.categories.findByName('ULAŞIM', TxType.expense))?.name,
+          'Ulaşım',
+        );
+        expect(
+          (await r.categories.findByName('YEME-İÇME', TxType.expense))?.name,
+          'Yeme-İçme',
+        );
+      });
+
+      test('kategori adı büyük/küçük harf farkıyla tekrar eklenemez', () async {
+        for (final name in ['market', 'MARKET', 'sağlık']) {
+          await expectLater(
+            r.categories.add(
+              Category(
+                name: name,
+                type: TxType.expense,
+                color: 0,
+                icon: 'category',
+              ),
+            ),
+            throwsA(isA<DuplicateCategoryException>()),
+            reason: name,
+          );
+        }
+      });
+
       test('kategori eklenir ve güncellenir', () async {
         final id = await r.categories.add(
           const Category(
@@ -225,6 +257,14 @@ void runRepositoryContract(String label, Future<RepoSet> Function() open) {
         expect(items.map((i) => i.name), ['Süt', 'Ekmek']);
         expect(items.every((i) => i.transactionId == id), isTrue);
         expect(items.first.quantity, 2);
+      });
+
+      test('olmayan kategoriyle işlem eklenemez (ArgumentError)', () async {
+        await expectLater(
+          addTx(amount: 100, categoryId: 999, date: DateTime(2026, 11, 8)),
+          throwsArgumentError,
+        );
+        expect(await r.txs.query(), isEmpty);
       });
 
       test('delete işlemi ve fiş kalemlerini siler', () async {

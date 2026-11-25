@@ -14,6 +14,15 @@ class SqliteTransactionRepository implements TransactionRepository {
   @override
   Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}) {
     return _db.transaction((txn) async {
+      final cat = await txn.query(
+        'categories',
+        columns: ['id'],
+        where: 'id = ?',
+        whereArgs: [tx.categoryId],
+      );
+      if (cat.isEmpty) {
+        throw ArgumentError.value(tx.categoryId, 'categoryId', 'kategori yok');
+      }
       final id = await txn.insert('transactions', tx.toMap()..remove('id'));
       for (final item in items) {
         await txn.insert(

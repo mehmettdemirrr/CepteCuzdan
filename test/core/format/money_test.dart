@@ -56,6 +56,15 @@ void main() {
     });
   });
 
+  group('parseTlToKurus büyük tutar', () {
+    test('12 haneye kadar kabul, daha uzunu taşmasın diye reddedilir', () {
+      expect(parseTlToKurus('999999999999'), 99999999999900);
+      expect(parseTlToKurus('999.999.999.999,99'), 99999999999999);
+      expect(parseTlToKurus('1234567890123'), isNull);
+      expect(parseTlToKurus('184467440737095517'), isNull);
+    });
+  });
+
   group('formatKurusInput', () {
     test('form alanı için ₺ işaretsiz yazar ve geri okunabilir', () {
       expect(formatKurusInput(32000), '320,00');
