@@ -13,6 +13,7 @@ import '../core/repositories/chat_message_repository.dart';
 import '../core/repositories/transaction_repository.dart';
 import '../features/budget/alert_notifier.dart';
 import '../features/budget/budget_alert_service.dart';
+import '../features/dashboard/dashboard_provider.dart';
 import '../features/transactions/category_provider.dart';
 import '../features/transactions/transaction_provider.dart';
 
@@ -74,6 +75,13 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
       ChangeNotifierProvider(
         lazy: false, // kategoriler açılışta yüklensin
         create: (_) => CategoryProvider(deps.categories)..load(),
+      ),
+      ChangeNotifierProvider(
+        create: (c) => DashboardProvider(
+          txs: deps.txs,
+          budgets: deps.budgets,
+          events: c.read<TransactionProvider>(),
+        )..load(),
       ),
     ],
     child: child,

@@ -1,5 +1,6 @@
 import '../../core/format/dates.dart';
 import '../../core/models/budget.dart';
+import '../../core/models/period_summary.dart';
 import '../../core/repositories/budget_repository.dart';
 import '../../core/repositories/transaction_repository.dart';
 
@@ -25,15 +26,17 @@ class BudgetLine {
 }
 
 /// [month] (`yyyy-MM`) için tanımlı her limit ve harcaması. Genel bütçede
-/// harcama ayın toplam gideridir; gelirler sayılmaz.
+/// harcama ayın toplam gideridir; gelirler sayılmaz. Ayın özeti zaten
+/// hesaplandıysa [summary] ile verilir.
 Future<List<BudgetLine>> budgetLinesFor(
   String month, {
   required BudgetRepository budgets,
   required TransactionRepository txs,
+  PeriodSummary? summary,
 }) async {
   final limits = await budgets.forMonth(month);
   if (limits.isEmpty) return const [];
-  final summary = await txs.summarize(monthOf(DateTime.parse('$month-01')));
+  summary ??= await txs.summarize(monthOf(DateTime.parse('$month-01')));
   return [
     for (final b in limits)
       BudgetLine(

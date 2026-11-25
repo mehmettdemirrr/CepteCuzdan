@@ -8,6 +8,16 @@ class AppShell extends StatefulWidget {
 
   final List<Widget> pages;
 
+  static const homeTab = 0;
+  static const assistantTab = 1;
+  static const transactionsTab = 2;
+  static const reportsTab = 3;
+
+  /// Sekmelerin içinden başka bir sekmeye geçmek için (ör. "Tümü" düğmesi).
+  static void selectTab(BuildContext context, int index) {
+    context.findAncestorStateOfType<_AppShellState>()?._select(index);
+  }
+
   @override
   State<AppShell> createState() => _AppShellState();
 }
@@ -15,13 +25,15 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
 
+  void _select(int index) => setState(() => _index = index);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(index: _index, children: widget.pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: _select,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),

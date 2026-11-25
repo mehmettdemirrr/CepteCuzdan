@@ -28,4 +28,37 @@ void main() {
     expect(find.byKey(const Key('tab-reports')).hitTestable(), findsOneWidget);
     expect(find.byKey(const Key('tab-home')).hitTestable(), findsNothing);
   });
+
+  testWidgets('sayfa içinden selectTab ile sekme değiştirilir', (t) async {
+    await t.pumpWidget(
+      MaterialApp(
+        home: AppShell(
+          pages: [
+            Builder(
+              builder: (c) => Center(
+                child: TextButton(
+                  onPressed: () =>
+                      AppShell.selectTab(c, AppShell.transactionsTab),
+                  child: const Text('Tümü'),
+                ),
+              ),
+            ),
+            const SizedBox(),
+            const ColoredBox(
+              key: Key('tab-transactions'),
+              color: Colors.white,
+              child: SizedBox.expand(),
+            ),
+            const SizedBox(),
+          ],
+        ),
+      ),
+    );
+    await t.tap(find.text('Tümü'));
+    await t.pumpAndSettle();
+    expect(
+      find.byKey(const Key('tab-transactions')).hitTestable(),
+      findsOneWidget,
+    );
+  });
 }

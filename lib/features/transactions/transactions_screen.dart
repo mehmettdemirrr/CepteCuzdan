@@ -2,15 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../core/models/enums.dart';
 import '../../core/models/transaction_record.dart';
-import '../../core/ui/widgets/amount_text.dart';
-import '../../core/ui/widgets/category_avatar.dart';
 import '../../core/ui/widgets/empty_state.dart';
 import 'category_management_screen.dart';
-import 'category_provider.dart';
 import 'transaction_form_screen.dart';
 import 'transaction_provider.dart';
+import 'transaction_tile.dart';
 
 /// İşlemler sekmesi: tüm kayıtlar gün gün, en yeni önce. Dokununca düzenle,
 /// sola kaydırınca sil.
@@ -141,7 +138,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
               const SnackBar(content: Text('İşlem silindi')),
             );
           },
-          child: _TransactionTile(tx: tx, onTap: () => _openForm(tx)),
+          child: TransactionTile(tx: tx, onTap: () => _openForm(tx)),
         ),
       );
     }
@@ -163,48 +160,6 @@ class _DayHeader extends StatelessWidget {
         style: theme.textTheme.labelLarge?.copyWith(
           color: theme.colorScheme.primary,
         ),
-      ),
-    );
-  }
-}
-
-class _TransactionTile extends StatelessWidget {
-  const _TransactionTile({required this.tx, required this.onTap});
-
-  final TransactionRecord tx;
-  final VoidCallback onTap;
-
-  static const _sourceLabels = {
-    TxSource.receipt: 'Fiş',
-    TxSource.voice: 'Ses',
-    TxSource.chat: 'Sohbet',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final category = context.watch<CategoryProvider>().byId(tx.categoryId);
-    final categoryName = category?.name ?? 'Kategori yok';
-    final merchant = tx.merchant;
-    final title = merchant ?? categoryName;
-    final subtitle = [
-      if (merchant != null) categoryName,
-      if (tx.note != null) tx.note!,
-      if (_sourceLabels[tx.source] != null) _sourceLabels[tx.source]!,
-    ].join(' · ');
-
-    return ListTile(
-      onTap: onTap,
-      leading: category == null
-          ? const CircleAvatar(child: Icon(Icons.help_outline))
-          : CategoryAvatar(category),
-      title: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: subtitle.isEmpty
-          ? null
-          : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
-      trailing: AmountText(
-        tx.amount,
-        type: tx.type,
-        style: Theme.of(context).textTheme.titleMedium,
       ),
     );
   }
