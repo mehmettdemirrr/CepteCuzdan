@@ -11,25 +11,33 @@ import '../core/repositories/budget_repository.dart';
 import '../core/repositories/category_repository.dart';
 import '../core/repositories/chat_message_repository.dart';
 import '../core/repositories/transaction_repository.dart';
+import '../features/budget/alert_notifier.dart';
+import '../features/budget/budget_alert_service.dart';
 import '../features/transactions/category_provider.dart';
 import '../features/transactions/transaction_provider.dart';
 
-/// Uygulamanın dış bağımlılıkları. Uygulamada SQLite, testlerde sahte
-/// repository'ler verilir; provider ağacı ikisinde de aynıdır.
+/// Uygulamanın dış bağımlılıkları. Uygulamada SQLite ve gerçek bildirim,
+/// testlerde sahteleri verilir; provider ağacı ikisinde de aynıdır.
 class AppDeps {
   AppDeps({
     required this.txs,
     required this.categories,
     required this.budgets,
     required this.chats,
+    required this.notifier,
     required this.prefs,
   });
 
-  factory AppDeps.sqlite(Database db, SharedPreferences prefs) => AppDeps(
+  factory AppDeps.sqlite(
+    Database db,
+    SharedPreferences prefs,
+    AlertNotifier notifier,
+  ) => AppDeps(
     txs: SqliteTransactionRepository(db),
     categories: SqliteCategoryRepository(db),
     budgets: SqliteBudgetRepository(db),
     chats: SqliteChatMessageRepository(db),
+    notifier: notifier,
     prefs: prefs,
   );
 
@@ -37,12 +45,20 @@ class AppDeps {
   final CategoryRepository categories;
   final BudgetRepository budgets;
   final ChatMessageRepository chats;
+  final AlertNotifier notifier;
   final SharedPreferences prefs;
 }
 
-/// Tüm repository ve provider'ları [child]'ın üstüne kurar.
+/// Tüm repository, servis ve provider'ları [child]'ın üstüne kurar.
 /// Berkay: asistan provider'larını listenin sonuna ekle.
 Widget buildProviders({required AppDeps deps, required Widget child}) {
+  final alerts = BudgetAlertService(
+    budgets: deps.budgets,
+    txs: deps.txs,
+    categories: deps.categories,
+    notifier: deps.notifier,
+    prefs: deps.prefs,
+  );
   return MultiProvider(
     providers: [
       Provider<TransactionRepository>.value(value: deps.txs),
@@ -50,7 +66,11 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
       Provider<BudgetRepository>.value(value: deps.budgets),
       Provider<ChatMessageRepository>.value(value: deps.chats),
       Provider<SharedPreferences>.value(value: deps.prefs),
-      ChangeNotifierProvider(create: (_) => TransactionProvider(deps.txs)),
+      Provider<BudgetAlertService>.value(value: alerts),
+      ChangeNotifierProvider(
+        create: (_) =>
+            TransactionProvider(deps.txs, onChanged: alerts.checkMonth),
+      ),
       ChangeNotifierProvider(
         lazy: false, // kategoriler açılışta yüklensin
         create: (_) => CategoryProvider(deps.categories)..load(),

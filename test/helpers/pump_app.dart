@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../fakes/fake_alert_notifier.dart';
 import '../fakes/fake_repositories.dart';
 
 /// Widget testleri için sahte bağımlılıklar.
@@ -14,6 +15,7 @@ class TestDeps {
   TestDeps({this.initialPrefs = const {}});
 
   final repos = FakeRepos();
+  final notifier = FakeAlertNotifier();
 
   /// `SharedPreferences.setMockInitialValues` için başlangıç değerleri.
   final Map<String, Object> initialPrefs;
@@ -30,6 +32,7 @@ class TestDeps {
       categories: categories,
       budgets: budgets,
       chats: chats,
+      notifier: notifier,
       prefs: await SharedPreferences.getInstance(),
     );
   }
