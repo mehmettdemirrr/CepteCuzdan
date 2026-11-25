@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/ui/app_theme.dart';
 import '../features/dashboard/dashboard_screen.dart';
+import '../features/reports/report_screen.dart';
 import '../features/transactions/transactions_screen.dart';
 import 'shell.dart';
 
@@ -29,7 +30,7 @@ class CepteCuzdanApp extends StatelessWidget {
           // Berkay: Asistan ekranı hazır olunca bu satırı kendi ekranınla değiştir.
           _ComingSoon('Asistan'),
           TransactionsScreen(),
-          _ComingSoon('Raporlar'),
+          ReportScreen(),
         ],
       ),
     );

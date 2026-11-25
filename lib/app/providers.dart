@@ -14,6 +14,7 @@ import '../core/repositories/transaction_repository.dart';
 import '../features/budget/alert_notifier.dart';
 import '../features/budget/budget_alert_service.dart';
 import '../features/dashboard/dashboard_provider.dart';
+import '../features/reports/report_provider.dart';
 import '../features/transactions/category_provider.dart';
 import '../features/transactions/transaction_provider.dart';
 
@@ -82,6 +83,11 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
           budgets: deps.budgets,
           events: c.read<TransactionProvider>(),
         )..load(),
+      ),
+      ChangeNotifierProvider(
+        create: (c) =>
+            ReportProvider(txs: deps.txs, events: c.read<TransactionProvider>())
+              ..load(),
       ),
     ],
     child: child,
