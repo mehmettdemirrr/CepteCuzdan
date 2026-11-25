@@ -53,9 +53,15 @@ class _CategoryEditorSheetState extends State<CategoryEditorSheet> {
     super.dispose();
   }
 
+  bool _saving = false;
+
   Future<void> _save() async {
+    // Çift dokunmada ikinci kayıt denemesi sayfa kapandıktan sonra
+    // bitip setState çağırmasın.
+    if (_saving) return;
     setState(() => _duplicateError = null);
     if (!_formKey.currentState!.validate()) return;
+    _saving = true;
     final provider = context.read<CategoryProvider>();
     final navigator = Navigator.of(context);
     final i = widget.initial;
@@ -75,7 +81,9 @@ class _CategoryEditorSheetState extends State<CategoryEditorSheet> {
       }
       navigator.pop();
     } on DuplicateCategoryException {
-      setState(() => _duplicateError = 'Bu adda kategori var');
+      if (mounted) setState(() => _duplicateError = 'Bu adda kategori var');
+    } finally {
+      _saving = false;
     }
   }
 

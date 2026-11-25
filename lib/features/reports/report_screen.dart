@@ -444,6 +444,25 @@ class _Breakdown extends StatelessWidget {
                 ],
               ),
             ),
+          const Divider(height: 1),
+          ListTile(
+            key: const Key('breakdown-total'),
+            title: Text(
+              'Toplam',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                AmountText(
+                  data.currentTotal,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                ChangeBadge(data.totalChange),
+              ],
+            ),
+          ),
         ],
       ),
     );

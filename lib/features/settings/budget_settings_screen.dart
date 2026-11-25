@@ -67,12 +67,48 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
         _controllerFor(b.categoryId!).text = text;
       }
     }
+    _saved = _snapshot();
     setState(() => _loading = false);
   }
 
-  void _shiftMonth(int delta) {
+  /// Son yüklenen/kaydedilen alan değerleri; değişiklik tespiti için.
+  Map<int?, String> _saved = const {};
+
+  Map<int?, String> _snapshot() => {
+    null: _overall.text.trim(),
+    for (final e in _byCategory.entries) e.key: e.value.text.trim(),
+  };
+
+  bool get _dirty {
+    final now = _snapshot();
+    return now.entries.any((e) => (_saved[e.key] ?? '') != e.value);
+  }
+
+  Future<void> _shiftMonth(int delta) async {
+    if (_dirty) {
+      final discard = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+          title: const Text('Kaydedilmemiş değişiklikler silinsin mi?'),
+          content: const Text(
+            'Bu ayın limitlerinde yaptığın değişiklikler kaydedilmedi.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(d, false),
+              child: const Text('Vazgeç'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(d, true),
+              child: const Text('Sil ve geç'),
+            ),
+          ],
+        ),
+      );
+      if (discard != true || !mounted) return;
+    }
     _month = DateTime(_month.year, _month.month + delta);
-    _load();
+    await _load();
   }
 
   Future<void> _save(List<Category> categories) async {
@@ -93,6 +129,7 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+    _saved = _snapshot();
     messenger.showSnackBar(const SnackBar(content: Text('Bütçe kaydedildi')));
   }
 
@@ -126,7 +163,7 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
                 IconButton(
                   tooltip: 'Önceki ay',
                   icon: const Icon(Icons.chevron_left),
-                  onPressed: () => _shiftMonth(-1),
+                  onPressed: _loading || _saving ? null : () => _shiftMonth(-1),
                 ),
                 Expanded(
                   child: Text(
@@ -138,7 +175,7 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
                 IconButton(
                   tooltip: 'Sonraki ay',
                   icon: const Icon(Icons.chevron_right),
-                  onPressed: () => _shiftMonth(1),
+                  onPressed: _loading || _saving ? null : () => _shiftMonth(1),
                 ),
               ],
             ),

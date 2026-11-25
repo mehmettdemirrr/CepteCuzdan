@@ -5,11 +5,14 @@ import 'package:cepte_cuzdan/features/dashboard/dashboard_provider.dart';
 import 'package:cepte_cuzdan/features/dashboard/dashboard_screen.dart';
 import 'package:cepte_cuzdan/features/reports/report_provider.dart';
 import 'package:cepte_cuzdan/features/reports/report_screen.dart';
+import 'package:cepte_cuzdan/features/settings/budget_settings_screen.dart';
 import 'package:cepte_cuzdan/features/settings/data_resetter.dart';
 import 'package:cepte_cuzdan/features/settings/settings_screen.dart';
+import 'package:cepte_cuzdan/features/transactions/category_management_screen.dart';
 import 'package:cepte_cuzdan/features/transactions/transaction_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'fakes/failing_transaction_repository.dart';
@@ -138,5 +141,89 @@ void main() {
     }
     await t.pumpAndSettle();
     expect(find.text('Simit'), findsOneWidget);
+  });
+
+  testWidgets(
+    'kategori sayfasında Kaydet\'e iki kez basmak tek kategori ekler',
+    (t) async {
+      final d = TestDeps();
+      await pumpApp(t, const CategoryManagementScreen(), deps: d);
+      await t.pumpAndSettle();
+      await t.tap(find.text('Kategori ekle'));
+      await t.pumpAndSettle();
+      await t.enterText(find.byKey(const Key('category-name-field')), 'Kahve');
+      await t.tap(find.text('Kaydet'));
+      await t.tap(find.text('Kaydet'), warnIfMissed: false);
+      await t.pumpAndSettle();
+      expect(t.takeException(), isNull);
+      expect(
+        (await d.categories.all()).where((c) => c.name == 'Kahve'),
+        hasLength(1),
+      );
+      expect(find.text('Bu adda kategori var'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'bütçe ekranında ay değiştirince kaydedilmemiş değişiklik sorulur',
+    (t) async {
+      await pumpApp(t, const BudgetSettingsScreen(), deps: TestDeps());
+      await t.pumpAndSettle();
+      final title = find.text(DateFormat('MMMM y', 'tr_TR').format(now));
+      expect(title, findsOneWidget);
+      await t.enterText(find.byKey(const Key('budget-overall')), '5000');
+      await t.tap(find.byTooltip('Sonraki ay'));
+      await t.pumpAndSettle();
+      expect(
+        find.text('Kaydedilmemiş değişiklikler silinsin mi?'),
+        findsOneWidget,
+      );
+      await t.tap(find.text('Vazgeç'));
+      await t.pumpAndSettle();
+      expect(title, findsOneWidget);
+      expect(find.text('5000'), findsOneWidget);
+
+      await t.tap(find.byTooltip('Sonraki ay'));
+      await t.pumpAndSettle();
+      await t.tap(find.text('Sil ve geç'));
+      await t.pumpAndSettle();
+      expect(title, findsNothing);
+      expect(find.text('5000'), findsNothing);
+    },
+  );
+
+  testWidgets('değişiklik yokken ay değiştirmek sormaz', (t) async {
+    await pumpApp(t, const BudgetSettingsScreen(), deps: TestDeps());
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Önceki ay'));
+    await t.pumpAndSettle();
+    expect(find.text('Kaydedilmemiş değişiklikler silinsin mi?'), findsNothing);
+  });
+
+  testWidgets('rapor kategori dökümünün altında toplam satırı var', (t) async {
+    final d = TestDeps();
+    await d.txs.add(tx(12000));
+    await d.txs.add(
+      TransactionRecord(
+        type: TxType.expense,
+        amount: 5000,
+        categoryId: 2,
+        date: now,
+        source: TxSource.manual,
+        createdAt: now,
+      ),
+    );
+    await pumpApp(t, const ReportScreen(), deps: d);
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(find.byKey(const Key('breakdown-total')), 200);
+    final row = find.byKey(const Key('breakdown-total'));
+    expect(
+      find.descendant(of: row, matching: find.text('Toplam')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: row, matching: find.text('₺170,00')),
+      findsOneWidget,
+    );
   });
 }
