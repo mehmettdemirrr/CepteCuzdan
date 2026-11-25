@@ -198,8 +198,9 @@ class FakeCategoryRepository implements CategoryRepository {
   Future<void> delete(int id) async {
     final c = _s.categories.where((x) => x.id == id).firstOrNull;
     if (c == null) return;
-    if (c.isDefault)
+    if (c.isDefault) {
       throw StateError('Varsayılan kategori silinemez: ${c.name}');
+    }
     final fallback = _s.categories.firstWhere(
       (x) => x.isDefault && x.type == c.type && x.name == fallbackCategoryName,
     );
@@ -265,8 +266,9 @@ class FakeChatMessageRepository implements ChatMessageRepository {
   @override
   Future<void> linkTransaction(int messageId, int transactionId) async {
     final i = _s.chats.indexWhere((m) => m.id == messageId);
-    if (i >= 0)
+    if (i >= 0) {
       _s.chats[i] = _s.chats[i].copyWith(transactionId: transactionId);
+    }
   }
 
   @override
