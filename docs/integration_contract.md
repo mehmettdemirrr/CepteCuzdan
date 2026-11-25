@@ -30,7 +30,7 @@ Bu dosya modeller, repository arabirimleri ve asistan modülünün veri katmanı
 
 ```dart
 abstract class TransactionRepository {
-  Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}); // işlem + kalemler tek DB transaction'ı; olmayan categoryId → hata (tipine güvenme)
+  Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}); // işlem + kalemler tek DB transaction'ı; olmayan categoryId → ArgumentError
   Future<void> update(TransactionRecord tx);
   Future<void> delete(int id);              // kalemler silinir, bağlı sohbet mesajının transactionId'si null olur
   Future<TransactionRecord?> getById(int id);
@@ -41,8 +41,8 @@ abstract class TransactionRepository {
 
 abstract class CategoryRepository {
   Future<List<Category>> all({TxType? type});
-  Future<Category?> findByName(String name, TxType type); // birebir, sonra büyük/küçük harf duyarsız
-  Future<int> add(Category c);       // aynı ad+tip → DuplicateCategoryException
+  Future<Category?> findByName(String name, TxType type); // birebir, sonra Türkçe büyük/küçük harf duyarsız (SAĞLIK = Sağlık)
+  Future<int> add(Category c);       // aynı ad+tip (büyük/küçük harf duyarsız) → DuplicateCategoryException
   Future<void> update(Category c);
   Future<void> delete(int id);       // varsayılan → StateError; işlemler aynı tipteki "Diğer"e taşınır
 }
@@ -87,6 +87,10 @@ final kurus = s.expenseByCategory[market!.id] ?? 0;
 
 - Ayarlar → **Verileri sıfırla** işlemleri, bütçeleri, **sohbet geçmişini** ve kullanıcı kategorilerini siler, ardından `TransactionProvider.markChanged()` çağırır. Sohbet ekranı `TransactionProvider`'ı dinleyip (`revision` değişince) geçmişi yeniden yüklemeli. Fiş fotoğrafı dosyalarını silmek asistan tarafının işi.
 - `TransactionProvider.add` sonrası bütçe limitleri otomatik kontrol edilir; %80'e ulaşılınca ve aşılınca yerel bildirim gider (`lib/features/budget/`). Asistanın ek bir şey yapmasına gerek yok.
+
+## Şema sürümü
+
+Veritabanı sürümü `AppDatabase.version` (şu an 2: bütçe tekilliği indeksi). Şemada değişiklik gerekirse `version` artırılır ve `AppDatabase._upgrade` içine `if (oldVersion < N)` adımı eklenir; telefondaki mevcut veriler korunur. Tablo değişikliği önerilerini aşağıdaki **Öneriler** bölümüne yaz.
 
 ## Dikkat: `Category` ad çakışması
 
