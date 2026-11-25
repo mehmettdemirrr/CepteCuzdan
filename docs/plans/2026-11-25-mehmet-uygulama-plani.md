@@ -21,6 +21,7 @@ Bugün 25 Kasım Çarşamba, orijinal takvimin 3. haftası. Normalde 1. ve 2. ha
 | 25 Kas Çar | Task 0–2: repo/branch, iskelet, biçim yardımcıları. Akşam Berkay ile sözleşme görüşmesi | İskelet main'e girer, Berkay main'i kendi dalına alır |
 | 26 Kas Per | Task 3–4: sözleşme + SQLite → **PR② main** | Onay kartı gerçek repository'ye yazabilir |
 | 27–28 Kas | Task 5–7: tema/ortak bileşenler, provider'lar, Manuel İşlem | Ortak bileşenleri kullanır |
+| 26–28 Kas | **Ek:** Görev 14–16: ekran durumu testleri, yatay/küçük/geniş ekran uyumu, erişilebilirlik | Asistan ekranları aynı kurallarla yazılır |
 | 29 Kas Cmt | **PR③ main** + fişten uçtan uca kayıt denemesi (ortak) | Kilometre taşı 1 |
 | 30 Kas Paz | Task 8: bütçe hesapları ve bildirim servisi | — |
 | 1–2 Ara | Task 9: Dashboard → **PR④ main** | — |
@@ -82,6 +83,9 @@ PR için GitHub'daki "Compare & pull request" düğmesini ya da `gh pr create --
 - Mehmet'in modülleri internet olmadan çalışır ve hiç ağ çağrısı yapmaz.
 - Kategori ikonu DB'de string anahtar olarak tutulur. `IconData` sabit bir map'ten okunur, çünkü dinamik `IconData(codePoint)` release build'deki icon tree-shaking'i bozar.
 - 6 Aralık'tan sonra yeni özellik eklenmez.
+- **Ekran uyumu (hoca zorunlu):** her ekran dikey 360×800, küçük 320×568, **yatay 800×360**, geniş 1280×800 ve 2,0× yazı ölçeğinde taşmadan çalışır. Genişlik ≥ 600 dp'de yan gezinme (`NavigationRail`).
+- **Erişilebilirlik:** dokunma alanı ≥ 48 dp, ikon düğmelerinde tooltip, grafiklerde `Semantics` özeti, açık/koyu temada kontrast testleri.
+- **Geliştirme kuralları:** `docs/gelistirme-kurallari.md` iki geliştirici için bağlayıcıdır; her PR öncesi kontrol listesi geçilir.
 
 ## Review Focus
 
@@ -689,6 +693,9 @@ Ekran içeriği:
   6. Fişle yapılan kayıt (Berkay) İşlemler'de `receipt` kaynağı ve fiş kalemleriyle görünür.
   7. Uygulama kapatılıp açılınca veriler yerinde durur.
   8. "Verileri sıfırla" doğru çalışır.
+  9. Her ekran yatay çevrilince kullanılabilir; form klavye açıkken de kaydedilebilir.
+  10. Telefon yazı boyutu en büyükteyken metin kesilmez; TalkBack Ana Sayfa'yı ve grafikleri anlamlı okur.
+  11. Asistan ekranı (Berkay) da 9 ve 10'u geçer.
 - [ ] **Step 3:** Her hatayı GitHub Issue olarak aç. Düzeltirken önce hatayı yakalayan testi yaz, sonra düzelt. Commit: `fix: ...`.
 
 ### Task 13: Teslim (14–17 Aralık, ortak)
@@ -697,3 +704,114 @@ Ekran içeriği:
 - [ ] **Step 2:** Raporun son haline Task 4'teki şemayı, ekran görüntülerini, test özetini ve Berkay'ın saha denemesi tablosunu ekle.
 - [ ] **Step 3:** Son PR (`mehmet` → `main`) merge edildikten sonra `git tag v1.0.0; git push --tags`.
 - [ ] **Step 4:** Demo akışı: fiş → onay kartı → Dashboard → Rapor → limit bildirimi.
+
+---
+
+## Ek gereksinimler (25 Kasım akşamı)
+
+Hoca **yatay ekran uyumunu** zorunlu tutuyor. Buna ek olarak **erişilebilirlik** (dokunma alanı, ekran okuyucu etiketleri, kontrast, büyük yazı) ve **küçük ekran** desteği de istendi. Görev 1–11'de yazılan ekranlar telefon dikey (360 × 800) için test edildi; Görev 14–16 onları bu gereksinimlere göre düzenler. Berkay'ın asistan ekranları da aynı kurallara ve testlere uyar.
+
+Kurallar ve bugün yaşanan hatalardan çıkarılan dersler: **`docs/gelistirme-kurallari.md`**. İki geliştirici ve ajanları için bağlayıcıdır; her PR'dan önce oradaki kontrol listesi geçilir.
+
+**Takvim:** Görev 14 → 26 Kas, Görev 15 → 27 Kas, Görev 16 → 28 Kas (Mehmet). 29 Kasım entegrasyonundan önce bitmeli, böylece Berkay'ın ekranları baştan bu kurallarla yazılır.
+
+### Task 14: Ekran durumu test altyapısı ve responsive yardımcılar (26 Kas)
+
+**Files:**
+- Create: `lib/core/ui/responsive.dart`, `test/helpers/screen_matrix.dart`
+- Modify: `test/helpers/pump_app.dart` (ekran boyutu, yazı ölçeği, tema parametreleri)
+- Test: `test/core/ui/responsive_test.dart`
+
+**Interfaces:**
+- Produces (iki geliştirici de kullanır):
+
+```dart
+// lib/core/ui/responsive.dart
+const double kWideBreakpoint = 600;     // ≥ 600 dp: yan gezinme, iki sütun
+const double kMaxContentWidth = 840;    // geniş ekranda içerik ortalanır
+const double kMaxFormWidth = 600;
+bool isWide(BuildContext context);      // MediaQuery.sizeOf(context).width >= kWideBreakpoint
+double chartHeight(BuildContext context, {double max = 200, double min = 120});
+// = (ekranYüksekliği * 0.4).clamp(min, max)  → yatay 360 dp'de 144, dikey 800 dp'de 200
+class ContentWidth extends StatelessWidget {
+  const ContentWidth({super.key, required this.child, this.maxWidth = kMaxContentWidth});
+} // Center + ConstrainedBox(maxWidth)
+
+// test/helpers/screen_matrix.dart
+enum TestScreen {
+  phone(Size(360, 800)), small(Size(320, 568)), landscape(Size(800, 360)), tablet(Size(1280, 800));
+  const TestScreen(this.size);
+  final Size size;
+}
+/// [body]'yi beş durumda çalıştırır: phone, small, landscape, tablet (yazı 1,0×) ve phone (yazı 2,0×).
+/// Test adına "[yatay]", "[küçük]", "[geniş]", "[büyük yazı]" eklenir.
+void testScreens(String description, Future<void> Function(WidgetTester t) body, {TestDeps Function()? deps});
+// pump_app.dart:
+Future<void> pumpApp(WidgetTester t, Widget child,
+    {TestDeps? deps, TestScreen screen = TestScreen.phone, double textScale = 1.0,
+     ThemeMode themeMode = ThemeMode.light});
+// textScale → t.platformDispatcher.textScaleFactorTestValue; tearDown'da sıfırlanır
+```
+
+- [ ] **Step 1: Başarısız testleri yaz**
+  - `chartHeight dikeyde 200, yatayda 144, çok kısa ekranda 120` → 360×800'de 200, 800×360'ta 144, 800×250'de 120.
+  - `isWide 600 dp ve üstünde true` → 599 false, 600 true.
+  - `ContentWidth tablette içeriği 840 dp ile sınırlar ve ortalar` → 1280 genişlikte çocuğun genişliği 840, sol kenarı 220.
+  - `testScreens beş varyasyon üretir` → gövde 5 kez çağrılır; ekran boyutları ve yazı ölçeği doğru.
+- [ ] **Step 2:** `flutter test test/core/ui/responsive_test.dart` → FAIL.
+- [ ] **Step 3:** Yaz.
+- [ ] **Step 4:** Test → PASS; `flutter test` → hepsi PASS.
+- [ ] **Step 5:** Commit (`test(ui): ekran durumu matrisi ve responsive yardımcılar`).
+
+### Task 15: Mevcut ekranları yatay, küçük ve geniş ekrana uyarlama (27 Kas)
+
+**Files:**
+- Modify: `lib/app/shell.dart` (genişlik ≥ 600 → `NavigationRail`, değilse `NavigationBar`)
+- Modify: `lib/features/dashboard/dashboard_screen.dart` ve `widgets/*` (geniş ekranda iki sütun: sol Kalan Bütçe + Gelir/Gider + rozetler + denge; sağ pasta grafik + son işlemler), `widgets/category_pie_card.dart` (`chartHeight`)
+- Modify: `lib/features/reports/report_screen.dart` ve `widgets/*` (geniş ekranda grafik ve döküm yan yana, `chartHeight`)
+- Modify: `lib/features/transactions/transaction_form_screen.dart`, `lib/features/settings/budget_settings_screen.dart`, `lib/features/settings/settings_screen.dart` (`ContentWidth(maxWidth: kMaxFormWidth)`), `transactions_screen.dart` ve `category_management_screen.dart` (`ContentWidth`)
+- Test: `test/responsive/screens_matrix_test.dart`
+
+**Interfaces:**
+- Consumes: Görev 14'teki `isWide`, `chartHeight`, `ContentWidth`, `testScreens`.
+- Produces: `AppShell` geniş ekranda `NavigationRail` gösterir; `AppShell.selectTab` iki düzende de çalışır.
+
+Kararlar:
+- Yatay telefon (800 × 360) da "geniş" sayılır: yan gezinme dikey alanı korur.
+- Grafik yüksekliği her zaman `chartHeight(context)`; sabit 180/200 dp kalmaz.
+- Form ekranlarında "Kaydet", klavye açıkken (`viewInsets.bottom = 300`) yatay ekranda kaydırılarak erişilebilir olmalı.
+
+- [ ] **Step 1: Başarısız testleri yaz** (hepsi `testScreens` ile beş durumda)
+  - `Ana Sayfa dolu veriyle taşmaz` → gelir, üç kategoride gider, genel bütçe ve %90 rozet; istisna yok; "Kalan Bütçe", "Harcama dağılımı", "Son işlemler" kaydırarak bulunur.
+  - `İşlemler listesi taşmaz`, `İşlem formu taşmaz ve Kaydet erişilebilir` (klavye açıkken de), `Raporlar taşmaz` (grafik + döküm), `Ayarlar ve Bütçe limitleri taşmaz`, `Kategori yönetimi ve kategori sayfası taşmaz`.
+  - `geniş ekranda yan gezinme, dar ekranda alt gezinme` → tablet ve yatayda `NavigationRail`, dikey telefonda `NavigationBar`; iki düzende de sekme değişimi çalışır.
+  - `geniş ekranda Ana Sayfa iki sütun` → "Kalan Bütçe" ile "Harcama dağılımı" başlıklarının üst kenarları aynı hizada, sol kenarları farklı.
+  - `yatayda grafik yüksekliği sınırlı` → `PieChart` ve `BarChart` yükseklikleri ≤ 144.
+- [ ] **Step 2:** `flutter test test/responsive` → FAIL (taşmalar ve eksik düzenler).
+- [ ] **Step 3:** Ekranları düzenle. Mevcut testlerin (telefon dikey) hepsi geçmeye devam etmeli.
+- [ ] **Step 4:** `flutter test` → hepsi PASS. Telefonda yatay çevirerek göz kontrolü.
+- [ ] **Step 5:** Commit (`feat(ui): yatay, küçük ve geniş ekran uyumu`).
+
+### Task 16: Erişilebilirlik (28 Kas)
+
+**Files:**
+- Modify: `lib/features/transactions/category_editor_sheet.dart` (renk noktaları 48 dp dokunma alanı + `Semantics(label: 'Renk N', selected: ...)`; ikon düğmelerine tooltip), `lib/features/dashboard/widgets/category_pie_card.dart` ve `lib/features/reports/widgets/comparison_chart.dart` (`Semantics` özet etiketi), `lib/core/ui/widgets/amount_text.dart` (`semanticsLabel`)
+- Test: `test/accessibility/a11y_test.dart`
+
+**Interfaces:**
+- Produces: `String spokenAmount(int kurus, {TxType? type})` (`lib/core/format/money.dart`) → `150,00 lira gider`, `5.000,00 lira gelir`, `eksi 500,00 lira`. `AmountText` bunu `semanticsLabel` olarak kullanır.
+- Pasta grafik etiketi: `Harcama dağılımı: Market yüzde 47, Ulaşım yüzde 24, …`; çubuk grafik etiketi: `Bu dönem ve önceki dönem: Market 120,00 lira, önceki 100,00 lira; …`.
+
+- [ ] **Step 1: Başarısız testleri yaz**
+  - Her ana ekran için (Ana Sayfa dolu, İşlemler, İşlem formu, Raporlar dolu, Ayarlar, Bütçe limitleri, Kategoriler, kategori sayfası açık): `meetsGuideline(androidTapTargetGuideline)` ve `meetsGuideline(labeledTapTargetGuideline)`.
+  - Aynı ekranlar açık ve koyu temada: `meetsGuideline(textContrastGuideline)`.
+  - `spokenAmount` → `(15000, expense)` "150,00 lira gider", `(500000, income)` "5.000,00 lira gelir", `(-50000)` "eksi 500,00 lira".
+  - `pasta grafik ekran okuyucuya özetlenir` → `find.bySemanticsLabel(RegExp(r'^Harcama dağılımı: Market yüzde \d+'))`.
+  - `çubuk grafik ekran okuyucuya özetlenir` → `find.bySemanticsLabel(RegExp(r'^Bu dönem ve önceki dönem: '))`.
+  - `renk seçimi ekran okuyucuda seçili durumunu söyler` → seçili renk noktası `isSelected` semantiğine sahip.
+- [ ] **Step 2:** `flutter test test/accessibility` → FAIL.
+- [ ] **Step 3:** Düzelt (dokunma alanları, etiketler, kontrast sorunları).
+- [ ] **Step 4:** `flutter test` → hepsi PASS. Telefonda TalkBack açıkken Ana Sayfa ve form kısa bir deneme.
+- [ ] **Step 5:** Commit (`feat(a11y): dokunma alanı, ekran okuyucu etiketleri, kontrast`).
+
+**Berkay için:** Asistan ekranı (sohbet, onay kartı, kamera ve mikrofon düğmeleri) da `testScreens` ve `a11y_test.dart`'taki aynı kontrollerden geçmeli. Onay kartı yatay ekranda kaydırılabilir olmalı. Mikrofon ve kamera düğmelerinde tooltip olmalı. Kaydet / Düzenle / İptal düğmeleri en az 48 dp olmalı.

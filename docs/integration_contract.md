@@ -1,5 +1,7 @@
 # Entegrasyon Sözleşmesi (Mehmet ↔ Berkay)
 
+> Geliştirme kuralları ve dikkat edilecekler (ekran uyumu, erişilebilirlik, bilinen tuzaklar): `docs/gelistirme-kurallari.md`. Berkay'ın adımları: `docs/berkay-yol-haritasi.md`.
+
 Bu dosya modeller, repository arabirimleri ve asistan modülünün veri katmanına nasıl yazacağını tanımlar. Kod `lib/core/models/` ve `lib/core/repositories/` altında; buradaki her değişiklik iki tarafın onayıyla yapılır. Değişiklik önerisi bu dosyanın sonundaki **Öneriler** bölümüne yazılır.
 
 ## Veri kuralları
