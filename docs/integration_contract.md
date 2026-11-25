@@ -75,12 +75,22 @@ final kurus = s.expenseByCategory[market!.id] ?? 0;
 2. Kategori: `await categories.findByName(json['category'], type) ?? await categories.findByName('Diğer', type)`.
 3. Kayıt nesnesi: `amount: tlToKurus(json['amount'])`, `date: fromDbDate(json['date'])`, `source: TxSource.receipt / voice / chat`, kalemler `ReceiptItem(name, quantity, price: tlToKurus(satırTutarı))`.
 4. Onay kartında **Kaydet**: `context.read<TransactionProvider>().add(tx, items: items)`.
-   `TransactionProvider` repository'yi sarar; kayıttan sonra Dashboard/Rapor yenilenir ve bütçe uyarısı kontrol edilir. Repository'ye doğrudan yazmayın.
-   (`TransactionProvider`, Mehmet'in Task 6'sında gelecek; o zamana kadar testlerde `test/fakes/fake_repositories.dart` kullanılabilir.)
+   `TransactionProvider` (`lib/features/transactions/transaction_provider.dart`) repository'yi sarar; kayıttan sonra Dashboard/Rapor yenilenir ve bütçe uyarısı kontrol edilir. Repository'ye doğrudan yazmayın.
+5. Onay kartındaki **Düzenle** için istersen `TransactionFormScreen(initial: taslak)` açılabilir: `id`'si olmayan bir taslak verilirse form yeni kayıt ekler ve `source`'u korur. Fiş kalemlerini form taşımaz; kalemli kayıtlar için kendi düzenleme akışın gerekir.
+
+## Bağımlılık ağacı
+
+- `lib/app/providers.dart` → `buildProviders(deps: AppDeps, child: ...)`. Repository'ler `Provider<XRepository>`, `TransactionProvider` ve `CategoryProvider` `ChangeNotifierProvider` olarak sağlanır. Asistan provider'larını listenin sonuna ekle; `context.read<ChatMessageRepository>()` ile sohbet repository'sine ulaşılır.
+- Asistan sekmesi: `lib/app/app.dart` içindeki `_ComingSoon('Asistan')` satırı.
+
+## Dikkat: `Category` ad çakışması
+
+`package:flutter/foundation.dart` da `Category` adında bir annotation dışa aktarıyor. `foundation.dart`'ı tamamen içe aktaran bir dosyada modeldeki `Category` ile çakışır. Çözüm: `import 'package:flutter/foundation.dart' show ChangeNotifier;` gibi `show` ile içe aktar. `material.dart` çakışmaz.
 
 ## Testler
 
 - `test/fakes/fake_repositories.dart`: `FakeRepos()` dört repository'nin bellek içi sürümünü verir (varsayılan kategoriler id 1–9).
+- `test/helpers/pump_app.dart`: `pumpApp(tester, widget, deps: TestDeps())` uygulamanın tema, Türkçe yerelleştirme ve provider ağacını fake'lerle kurar (360×800 telefon ekranı).
 - Fake'ler ve SQLite implementasyonu aynı sözleşme testinden geçer: `test/core/repositories/repository_contract.dart`.
 
 ## Açık kararlar (Berkay onayı bekleniyor)
