@@ -117,3 +117,15 @@ app.*.symbols
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
 !/dev/ci/**/Gemfile.lock
+# CepteCüzdan uygulaması
+# Uygulamalarda pubspec.lock commit edilir (ikimiz aynı paket sürümlerini kullanalım)
+!pubspec.lock
+# IDE dosyaları
+.idea/
+*.iml
+.vscode/
+# Gizli/yerel yapılandırma (AGENTS.md §7)
+.env
+*.jks
+*.keystore
+key.properties
