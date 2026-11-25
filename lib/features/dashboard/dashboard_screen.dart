@@ -9,6 +9,7 @@ import '../../core/ui/app_theme.dart';
 import '../../core/ui/widgets/amount_text.dart';
 import '../../core/ui/widgets/empty_state.dart';
 import '../budget/budget_status.dart';
+import '../settings/budget_settings_screen.dart';
 import '../transactions/category_provider.dart';
 import '../transactions/transaction_form_screen.dart';
 import '../transactions/transaction_tile.dart';
@@ -121,14 +122,23 @@ class _RemainingCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            if (overall == null || remaining == null)
+            if (overall == null || remaining == null) ...[
               Text(
                 'Bütçe tanımlanmadı',
                 style: theme.textTheme.titleLarge?.copyWith(
                   color: scheme.onPrimaryContainer,
                 ),
-              )
-            else ...[
+              ),
+              const SizedBox(height: 8),
+              FilledButton.tonal(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const BudgetSettingsScreen(),
+                  ),
+                ),
+                child: const Text('Bütçe belirle'),
+              ),
+            ] else ...[
               Text(
                 formatKurus(remaining),
                 style: theme.textTheme.headlineMedium?.copyWith(

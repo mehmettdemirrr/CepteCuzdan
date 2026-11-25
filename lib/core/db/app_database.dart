@@ -33,6 +33,18 @@ class AppDatabase {
     );
   }
 
+  /// İşlemleri, fiş kalemlerini, bütçeleri, sohbet geçmişini ve kullanıcının
+  /// eklediği kategorileri siler. Varsayılan kategoriler kalır.
+  static Future<void> resetAll(Database db) {
+    return db.transaction((txn) async {
+      await txn.delete('chat_messages');
+      await txn.delete('receipt_items');
+      await txn.delete('transactions');
+      await txn.delete('budgets');
+      await txn.delete('categories', where: 'is_default = 0');
+    });
+  }
+
   static Future<void> _create(Database db, int version) async {
     final batch = db.batch();
     for (final sql in _schema) {

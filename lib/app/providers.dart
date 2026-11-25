@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
+import '../core/db/app_database.dart';
+import '../core/format/money.dart';
 import '../core/db/sqlite_budget_repository.dart';
 import '../core/db/sqlite_category_repository.dart';
 import '../core/db/sqlite_chat_message_repository.dart';
@@ -13,8 +15,11 @@ import '../core/repositories/chat_message_repository.dart';
 import '../core/repositories/transaction_repository.dart';
 import '../features/budget/alert_notifier.dart';
 import '../features/budget/budget_alert_service.dart';
+import '../features/budget/budget_provider.dart';
 import '../features/dashboard/dashboard_provider.dart';
 import '../features/reports/report_provider.dart';
+import '../features/settings/data_resetter.dart';
+import '../features/settings/settings_provider.dart';
 import '../features/transactions/category_provider.dart';
 import '../features/transactions/transaction_provider.dart';
 
@@ -28,6 +33,7 @@ class AppDeps {
     required this.chats,
     required this.notifier,
     required this.prefs,
+    required this.resetData,
   });
 
   factory AppDeps.sqlite(
@@ -41,6 +47,7 @@ class AppDeps {
     chats: SqliteChatMessageRepository(db),
     notifier: notifier,
     prefs: prefs,
+    resetData: () => AppDatabase.resetAll(db),
   );
 
   final TransactionRepository txs;
@@ -49,6 +56,9 @@ class AppDeps {
   final ChatMessageRepository chats;
   final AlertNotifier notifier;
   final SharedPreferences prefs;
+
+  /// Verileri sıfırlar (bkz. [DataResetter]).
+  final Future<void> Function() resetData;
 }
 
 /// Tüm repository, servis ve provider'ları [child]'ın üstüne kurar.
@@ -69,6 +79,12 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
       Provider<ChatMessageRepository>.value(value: deps.chats),
       Provider<SharedPreferences>.value(value: deps.prefs),
       Provider<BudgetAlertService>.value(value: alerts),
+      Provider<DataResetter>.value(value: DataResetter(deps.resetData)),
+      ChangeNotifierProvider(create: (_) => SettingsProvider(deps.prefs)),
+      // AmountText bunu okur (çekirdek katman ayarlara bağımlı olmasın diye).
+      ProxyProvider<SettingsProvider, CurrencyStyle>(
+        update: (_, s, _) => s.currencyStyle,
+      ),
       ChangeNotifierProvider(
         create: (_) =>
             TransactionProvider(deps.txs, onChanged: alerts.checkMonth),
@@ -76,6 +92,13 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
       ChangeNotifierProvider(
         lazy: false, // kategoriler açılışta yüklensin
         create: (_) => CategoryProvider(deps.categories)..load(),
+      ),
+      ChangeNotifierProvider(
+        create: (c) => BudgetProvider(
+          budgets: deps.budgets,
+          alerts: alerts,
+          events: c.read<TransactionProvider>(),
+        ),
       ),
       ChangeNotifierProvider(
         create: (c) => DashboardProvider(

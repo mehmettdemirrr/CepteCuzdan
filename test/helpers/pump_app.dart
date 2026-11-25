@@ -34,6 +34,7 @@ class TestDeps {
       chats: chats,
       notifier: notifier,
       prefs: await SharedPreferences.getInstance(),
+      resetData: repos.reset,
     );
   }
 }

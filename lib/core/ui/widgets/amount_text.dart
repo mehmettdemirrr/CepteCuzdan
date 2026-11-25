@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../format/money.dart';
 import '../../models/enums.dart';
@@ -16,10 +17,18 @@ class AmountText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final money = MoneyColors.of(context);
+    // Ayarlardaki görünüm (provider ağacında yoksa ₺ simgesi).
+    final cs = Provider.of<CurrencyStyle?>(context) ?? CurrencyStyle.symbol;
     final (text, color) = switch (type) {
-      TxType.expense => ('-${formatKurus(kurus.abs())}', money.expense),
-      TxType.income => ('+${formatKurus(kurus.abs())}', money.income),
-      null => (formatKurus(kurus), null),
+      TxType.expense => (
+        '-${formatKurus(kurus.abs(), style: cs)}',
+        money.expense,
+      ),
+      TxType.income => (
+        '+${formatKurus(kurus.abs(), style: cs)}',
+        money.income,
+      ),
+      null => (formatKurus(kurus, style: cs), null),
     };
     final base = style ?? DefaultTextStyle.of(context).style;
     return Text(

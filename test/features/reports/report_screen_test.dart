@@ -2,6 +2,7 @@ import 'package:cepte_cuzdan/core/format/dates.dart';
 import 'package:cepte_cuzdan/core/models/enums.dart';
 import 'package:cepte_cuzdan/core/models/transaction_record.dart';
 import 'package:cepte_cuzdan/features/reports/report_screen.dart';
+import 'package:cepte_cuzdan/features/settings/settings_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,14 @@ TransactionRecord tx(
 );
 
 void main() {
+  testWidgets('Ayarlar düğmesi Ayarlar ekranını açar', (t) async {
+    await pumpApp(t, const ReportScreen(), deps: TestDeps());
+    await t.pumpAndSettle();
+    await t.tap(find.byTooltip('Ayarlar'));
+    await t.pumpAndSettle();
+    expect(find.byType(SettingsScreen), findsOneWidget);
+  });
+
   testWidgets('boş dönemde boş durum gösterir, grafik çizmez', (t) async {
     await pumpApp(t, const ReportScreen(), deps: TestDeps());
     await t.pumpAndSettle();

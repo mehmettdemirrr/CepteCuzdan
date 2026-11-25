@@ -9,6 +9,7 @@ import '../../core/ui/category_icons.dart';
 import '../../core/ui/widgets/amount_text.dart';
 import '../../core/ui/widgets/category_avatar.dart';
 import '../../core/ui/widgets/empty_state.dart';
+import '../settings/settings_screen.dart';
 import '../transactions/category_provider.dart';
 import '../transactions/transaction_form_screen.dart';
 import '../transactions/transaction_tile.dart';
@@ -18,10 +19,7 @@ import 'report_provider.dart';
 /// Raporlar sekmesi: haftalık/aylık/özel dönem gider dökümü, önceki dönemle
 /// kıyas, kategori filtresi ve dönemin işlemleri.
 class ReportScreen extends StatelessWidget {
-  const ReportScreen({super.key, this.actions = const []});
-
-  /// App bar düğmeleri (ör. Ayarlar).
-  final List<Widget> actions;
+  const ReportScreen({super.key});
 
   Future<void> _pickCustom(BuildContext context, ReportProvider p) async {
     final picked = await showDateRangePicker(
@@ -43,7 +41,18 @@ class ReportScreen extends StatelessWidget {
     final categories = context.watch<CategoryProvider>().ofType(TxType.expense);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Raporlar'), actions: actions),
+      appBar: AppBar(
+        title: const Text('Raporlar'),
+        actions: [
+          IconButton(
+            tooltip: 'Ayarlar',
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+            ),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [

@@ -83,6 +83,11 @@ final kurus = s.expenseByCategory[market!.id] ?? 0;
 - `lib/app/providers.dart` → `buildProviders(deps: AppDeps, child: ...)`. Repository'ler `Provider<XRepository>`, `TransactionProvider` ve `CategoryProvider` `ChangeNotifierProvider` olarak sağlanır. Asistan provider'larını listenin sonuna ekle; `context.read<ChatMessageRepository>()` ile sohbet repository'sine ulaşılır.
 - Asistan sekmesi: `lib/app/app.dart` içindeki `_ComingSoon('Asistan')` satırı.
 
+## Veri sıfırlama ve bildirimler
+
+- Ayarlar → **Verileri sıfırla** işlemleri, bütçeleri, **sohbet geçmişini** ve kullanıcı kategorilerini siler, ardından `TransactionProvider.markChanged()` çağırır. Sohbet ekranı `TransactionProvider`'ı dinleyip (`revision` değişince) geçmişi yeniden yüklemeli. Fiş fotoğrafı dosyalarını silmek asistan tarafının işi.
+- `TransactionProvider.add` sonrası bütçe limitleri otomatik kontrol edilir; %80'e ulaşılınca ve aşılınca yerel bildirim gider (`lib/features/budget/`). Asistanın ek bir şey yapmasına gerek yok.
+
 ## Dikkat: `Category` ad çakışması
 
 `package:flutter/foundation.dart` da `Category` adında bir annotation dışa aktarıyor. `foundation.dart`'ı tamamen içe aktaran bir dosyada modeldeki `Category` ile çakışır. Çözüm: `import 'package:flutter/foundation.dart' show ChangeNotifier;` gibi `show` ile içe aktar. `material.dart` çakışmaz.

@@ -3,6 +3,7 @@ import 'package:cepte_cuzdan/core/models/budget.dart';
 import 'package:cepte_cuzdan/core/models/enums.dart';
 import 'package:cepte_cuzdan/core/models/transaction_record.dart';
 import 'package:cepte_cuzdan/features/dashboard/dashboard_screen.dart';
+import 'package:cepte_cuzdan/features/settings/budget_settings_screen.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,6 +27,16 @@ TransactionRecord tx(
 );
 
 void main() {
+  testWidgets('bütçe yoksa Bütçe belirle düğmesi limit ekranını açar', (
+    t,
+  ) async {
+    await pumpApp(t, const DashboardScreen(), deps: TestDeps());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Bütçe belirle'));
+    await t.pumpAndSettle();
+    expect(find.byType(BudgetSettingsScreen), findsOneWidget);
+  });
+
   testWidgets('boş veride çökmez ve boş durumları gösterir', (t) async {
     await pumpApp(t, const DashboardScreen(), deps: TestDeps());
     await t.pumpAndSettle();

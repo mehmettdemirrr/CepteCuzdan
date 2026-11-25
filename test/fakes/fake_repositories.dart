@@ -36,6 +36,16 @@ class FakeRepos {
   late final FakeChatMessageRepository chats = FakeChatMessageRepository._(
     _store,
   );
+
+  /// `AppDatabase.resetAll` ile aynı: varsayılan kategoriler dışında her şeyi
+  /// siler.
+  Future<void> reset() async {
+    _store.chats.clear();
+    _store.items.clear();
+    _store.transactions.clear();
+    _store.budgets.clear();
+    _store.categories.removeWhere((c) => !c.isDefault);
+  }
 }
 
 class _Store {
