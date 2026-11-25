@@ -108,6 +108,7 @@ class _RemainingCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final overall = data.overall;
     final remaining = data.remaining;
+    final cs = Provider.of<CurrencyStyle?>(context) ?? CurrencyStyle.symbol;
     return Card(
       color: scheme.primaryContainer,
       child: Padding(
@@ -140,7 +141,7 @@ class _RemainingCard extends StatelessWidget {
               ),
             ] else ...[
               Text(
-                formatKurus(remaining),
+                formatKurus(remaining, style: cs),
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: remaining < 0
@@ -161,8 +162,8 @@ class _RemainingCard extends StatelessWidget {
               ),
               const SizedBox(height: 6),
               Text(
-                '${formatKurus(overall.spent)} / '
-                '${formatKurus(overall.budget.limitAmount)}',
+                '${formatKurus(overall.spent, style: cs)} / '
+                '${formatKurus(overall.budget.limitAmount, style: cs)}',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: scheme.onPrimaryContainer,
                 ),

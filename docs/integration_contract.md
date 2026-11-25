@@ -24,13 +24,13 @@ Bu dosya modeller, repository arabirimleri ve asistan modülünün veri katmanı
 | `ChatMessage` | `id, role (user/assistant), content, transactionId?, createdAt` |
 | `PeriodSummary` | `incomeTotal, expenseTotal, expenseByCategory, incomeByCategory, balance` |
 
-Hepsinde `toMap()`, `fromMap()`, `copyWith()`, `==` var. Varsayılan kategoriler `defaultCategories` içinde: gider için Market, Ulaşım, Faturalar, Yeme-İçme, Eğlence, Sağlık, Diğer; gelir için Maaş, Diğer.
+`PeriodSummary` dışındakilerde `toMap()`, `fromMap()`, `copyWith()`, `==` var (`PeriodSummary` yalnızca okunan bir özet). **Dikkat:** `copyWith` bir alanı `null`'a çeviremez (`draft.copyWith(merchant: null)` eski değeri korur); alan silinecekse yeni bir `TransactionRecord(...)` oluştur. Varsayılan kategoriler `defaultCategories` içinde: gider için Market, Ulaşım, Faturalar, Yeme-İçme, Eğlence, Sağlık, Diğer; gelir için Maaş, Diğer.
 
 ## Repository arabirimleri (`lib/core/repositories/`)
 
 ```dart
 abstract class TransactionRepository {
-  Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}); // işlem + kalemler tek DB transaction'ı
+  Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}); // işlem + kalemler tek DB transaction'ı; olmayan categoryId → hata (tipine güvenme)
   Future<void> update(TransactionRecord tx);
   Future<void> delete(int id);              // kalemler silinir, bağlı sohbet mesajının transactionId'si null olur
   Future<TransactionRecord?> getById(int id);

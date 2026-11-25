@@ -39,6 +39,16 @@ class ReportScreen extends StatelessWidget {
     final p = context.watch<ReportProvider>();
     final data = p.data;
     final categories = context.watch<CategoryProvider>().ofType(TxType.expense);
+    // Filtredeki kategori silindiyse (kategori yönetimi, veri sıfırlama)
+    // filtreyi temizle; açılır liste olmayan bir değerle çizilmesin.
+    final categoryExists = categories.any((c) => c.id == p.categoryId);
+    if (p.categoryId != null && !categoryExists) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!categories.any((c) => c.id == p.categoryId)) p.setCategory(null);
+      });
+    }
+    final selectedCategory = categoryExists ? p.categoryId : null;
+    final isCustom = p.period == ReportPeriod.custom;
 
     return Scaffold(
       appBar: AppBar(
@@ -82,10 +92,31 @@ class ReportScreen extends StatelessWidget {
                 onPressed: () => p.shift(-1),
               ),
               Expanded(
-                child: Text(
-                  rangeLabel(p.range, p.period),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.titleMedium,
+                // Özel dönemde "Özel" düğmesi tekrar basılınca tetiklenmediği
+                // için aralık etiketine dokunarak yeni aralık seçilir.
+                child: InkWell(
+                  key: const Key('report-range'),
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: isCustom ? () => _pickCustom(context, p) : null,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            rangeLabel(p.range, p.period),
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        if (isCustom) ...[
+                          const SizedBox(width: 6),
+                          const Icon(Icons.edit_calendar, size: 18),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
               IconButton(
@@ -98,8 +129,9 @@ class ReportScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           DropdownButtonFormField<int?>(
-            key: const Key('report-category'),
-            initialValue: p.categoryId,
+            // Değer dışarıdan değişince (filtre temizlendi) alan yenilensin.
+            key: ValueKey('report-category-$selectedCategory'),
+            initialValue: selectedCategory,
             decoration: const InputDecoration(
               labelText: 'Kategori',
               isDense: true,
@@ -210,17 +242,18 @@ class _TotalsCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Wrap(
-                    spacing: 4,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      ChangeBadge(data.totalChange),
-                      Text(
-                        'önceki döneme göre',
-                        style: theme.textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
+                  if (data.currentTotal > 0 || data.previousTotal > 0)
+                    Wrap(
+                      spacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        ChangeBadge(data.totalChange),
+                        Text(
+                          'önceki döneme göre',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

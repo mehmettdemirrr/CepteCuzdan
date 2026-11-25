@@ -91,7 +91,10 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
       ),
       ChangeNotifierProvider(
         lazy: false, // kategoriler açılışta yüklensin
-        create: (_) => CategoryProvider(deps.categories)..load(),
+        create: (c) => CategoryProvider(
+          deps.categories,
+          onDeleted: c.read<TransactionProvider>().markChanged,
+        )..load(),
       ),
       ChangeNotifierProvider(
         create: (c) => BudgetProvider(

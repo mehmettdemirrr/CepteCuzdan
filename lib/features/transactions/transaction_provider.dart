@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 
 import '../../core/format/dates.dart';
 import '../../core/models/enums.dart';
@@ -73,8 +73,15 @@ class TransactionProvider extends ChangeNotifier {
     notifyListeners();
     final cb = onChanged;
     if (cb == null) return;
+    // Kayıt veritabanına yazıldı; bütçe kontrolü hata verse bile işlem
+    // başarılı sayılır (aksi halde kullanıcı tekrar kaydedip çift kayıt
+    // oluşturur).
     for (final d in dates) {
-      await cb(d);
+      try {
+        await cb(d);
+      } catch (e) {
+        debugPrint('Bütçe kontrolü başarısız: $e');
+      }
     }
   }
 }

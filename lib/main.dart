@@ -15,7 +15,12 @@ Future<void> main() async {
   final db = await AppDatabase.open();
   final prefs = await SharedPreferences.getInstance();
   final notifier = LocalAlertNotifier();
-  await notifier.init();
+  // Bildirim altyapısı kurulamazsa uygulama yine açılsın.
+  try {
+    await notifier.init();
+  } catch (e) {
+    debugPrint('Bildirimler başlatılamadı: $e');
+  }
   runApp(
     buildProviders(
       deps: AppDeps.sqlite(db, prefs, notifier),
@@ -23,7 +28,11 @@ Future<void> main() async {
     ),
   );
   // Bildirim izni uygulama açıldıktan sonra istenir.
-  WidgetsBinding.instance.addPostFrameCallback(
-    (_) => notifier.requestPermission(),
-  );
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    try {
+      await notifier.requestPermission();
+    } catch (e) {
+      debugPrint('Bildirim izni istenemedi: $e');
+    }
+  });
 }

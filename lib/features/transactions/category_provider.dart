@@ -7,9 +7,13 @@ import '../../core/repositories/category_repository.dart';
 /// Kategorilerin bellekteki kopyası. Ekranlar senkron okur ([ofType],
 /// [byId]); değişiklikler repository'ye yazılıp liste yeniden yüklenir.
 class CategoryProvider extends ChangeNotifier {
-  CategoryProvider(this._repo);
+  CategoryProvider(this._repo, {this.onDeleted});
 
   final CategoryRepository _repo;
+
+  /// Kategori silinince çağrılır: işlemleri "Diğer"e taşındığı ve bütçe
+  /// limitleri silindiği için işlem ekranlarının yenilenmesi gerekir.
+  final void Function()? onDeleted;
   List<Category> _categories = const [];
   bool _loaded = false;
 
@@ -47,5 +51,6 @@ class CategoryProvider extends ChangeNotifier {
   Future<void> delete(int id) async {
     await _repo.delete(id);
     await load();
+    onDeleted?.call();
   }
 }
