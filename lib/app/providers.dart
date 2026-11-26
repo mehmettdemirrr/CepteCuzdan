@@ -13,6 +13,10 @@ import '../core/repositories/budget_repository.dart';
 import '../core/repositories/category_repository.dart';
 import '../core/repositories/chat_message_repository.dart';
 import '../core/repositories/transaction_repository.dart';
+import '../features/assistant/services/gemini/expense_draft_service.dart';
+import '../features/assistant/services/gemini/gemini_client.dart';
+import '../features/assistant/services/ocr/ocr_service.dart';
+import '../features/assistant/state/assistant_controller.dart';
 import '../features/budget/alert_notifier.dart';
 import '../features/budget/budget_alert_service.dart';
 import '../features/budget/budget_provider.dart';
@@ -116,6 +120,26 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
         create: (c) =>
             ReportProvider(txs: deps.txs, events: c.read<TransactionProvider>())
               ..load(),
+      ),
+      ChangeNotifierProvider(
+        create: (c) {
+          final draftService = ExpenseDraftService(FirebaseGeminiClient());
+          final receiptPipeline = ReceiptDraftPipeline(
+            scanService: ReceiptScanService(
+              picker: DeviceReceiptImagePicker(),
+              ocrEngine: const MlKitTextOcrEngine(),
+              storage: LocalReceiptImageStorage(),
+            ),
+            draftService: draftService,
+          );
+          return AssistantController(
+            chats: deps.chats,
+            transactions: c.read<TransactionProvider>(),
+            categories: c.read<CategoryProvider>(),
+            draftService: draftService,
+            receiptPipeline: receiptPipeline,
+          )..loadHistory();
+        },
       ),
     ],
     child: child,

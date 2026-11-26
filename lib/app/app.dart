@@ -1,10 +1,9 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 
 import '../core/ui/app_theme.dart';
-import '../features/assistant/ui/assistant_debug_probe.dart';
+import '../features/assistant/ui/assistant_screen.dart';
 import '../features/dashboard/dashboard_screen.dart';
 import '../features/reports/report_screen.dart';
 import '../features/settings/settings_provider.dart';
@@ -32,36 +31,10 @@ class CepteCuzdanApp extends StatelessWidget {
       home: const AppShell(
         pages: [
           DashboardScreen(),
-          // Berkay: Asistan ekranı hazır olunca bu satırı kendi ekranınla değiştir.
-          _ComingSoon('Asistan'),
+          AssistantScreen(),
           TransactionsScreen(),
           ReportScreen(),
         ],
-      ),
-    );
-  }
-}
-
-class _ComingSoon extends StatelessWidget {
-  const _ComingSoon(this.title);
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('$title yakında'),
-              if (kDebugMode) const AssistantDebugProbe(),
-            ],
-          ),
-        ),
       ),
     );
   }
