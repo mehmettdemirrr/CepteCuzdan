@@ -1,0 +1,456 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+import '../../../app/shell.dart';
+import '../../../core/format/dates.dart';
+import '../../../core/format/money.dart';
+import '../../../core/models/chat_message.dart';
+import '../../../core/models/enums.dart';
+import '../services/ocr/ocr_service.dart';
+import '../state/assistant_controller.dart';
+
+/// Asistan sohbet ekranı.
+/// 5 ekran durumunda (dikey, küçük, yatay 800×360, geniş, 2× yazı) taşmadan çalışır.
+class AssistantScreen extends StatefulWidget {
+  const AssistantScreen({super.key});
+
+  @override
+  State<AssistantScreen> createState() => _AssistantScreenState();
+}
+
+class _AssistantScreenState extends State<AssistantScreen> {
+  final TextEditingController _inputController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  int _lastMessageCount = 0;
+
+  @override
+  void dispose() {
+    _inputController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  Future<void> _handleSend() async {
+    final text = _inputController.text.trim();
+    if (text.isEmpty) return;
+    final controller = context.read<AssistantController>();
+    if (controller.isBusy) return;
+    _inputController.clear();
+    await controller.sendText(text);
+  }
+
+  Future<void> _showReceiptSourceSheet() async {
+    final controller = context.read<AssistantController>();
+    if (controller.isBusy) return;
+
+    final selected = await showModalBottomSheet<ReceiptImageSource>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                minTileHeight: 52,
+                leading: const Icon(Icons.photo_camera_outlined),
+                title: const Text('Kamera ile çek'),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(ReceiptImageSource.camera),
+              ),
+              ListTile(
+                minTileHeight: 52,
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Galeriden seç'),
+                onTap: () =>
+                    Navigator.of(sheetContext).pop(ReceiptImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (selected == null || !mounted) return;
+    await controller.scanReceipt(selected);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final controller = context.watch<AssistantController>();
+    final messages = controller.messages;
+
+    if (messages.length != _lastMessageCount) {
+      _lastMessageCount = messages.length;
+      if (messages.isNotEmpty) {
+        _scrollToBottom();
+      }
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Asistan')),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 840),
+          child: Column(
+            children: [
+              if (controller.isBusy) const LinearProgressIndicator(),
+              Expanded(
+                child: controller.isLoadingHistory && messages.isEmpty
+                    ? const Center(child: CircularProgressIndicator())
+                    : messages.isEmpty
+                    ? const _EmptyAssistantView()
+                    : ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) =>
+                            _MessageBubble(message: messages[index]),
+                      ),
+              ),
+              if (controller.pendingDraft != null)
+                _PendingDraftBanner(
+                  pending: controller.pendingDraft!,
+                  onDismiss: controller.clearPendingDraft,
+                ),
+              if (controller.errorMessage != null)
+                _ErrorBanner(
+                  message: controller.errorMessage!,
+                  canRetry: controller.canRetry && !controller.isBusy,
+                  onRetry: controller.retryLast,
+                  onManualAdd: () =>
+                      AppShell.selectTab(context, AppShell.transactionsTab),
+                  onDismiss: controller.clearError,
+                ),
+              _InputBar(
+                controller: _inputController,
+                isBusy: controller.isBusy,
+                onSend: _handleSend,
+                onCameraTap: _showReceiptSourceSheet,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyAssistantView extends StatelessWidget {
+  const _EmptyAssistantView();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight - 40),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.chat_bubble_outline,
+                  size: 40,
+                  color: scheme.primary,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Harcama veya gelirinizi yazın ya da fiş fotoğrafı ekleyin.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Örnek: "Taksiye 150 lira verdim" veya kamera simgesinden fiş çekin. Onayınız olmadan kayıt yapılmaz.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  const _MessageBubble({required this.message});
+
+  final ChatMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final isUser = message.role == ChatRole.user;
+    final rolePrefix = isUser ? 'Sen' : 'Asistan';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Semantics(
+          label: '$rolePrefix: ${message.content}',
+          excludeSemantics: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isUser
+                    ? scheme.primaryContainer
+                    : scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      rolePrefix,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: isUser
+                            ? scheme.onPrimaryContainer
+                            : scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      message.content,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: isUser
+                            ? scheme.onPrimaryContainer
+                            : scheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PendingDraftBanner extends StatelessWidget {
+  const _PendingDraftBanner({required this.pending, required this.onDismiss});
+
+  final PendingDraft pending;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final draft = pending.draft;
+    final amountText = formatKurus(tlToKurus(draft.amountTl));
+    final typeText = draft.type == TxType.income ? 'Gelir' : 'Gider';
+
+    return Material(
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              color: scheme.onSecondaryContainer,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Bekleyen taslak: $amountText · ${draft.categoryName} ($typeText) · ${toDbDate(draft.date)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Taslağı kapat',
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: onDismiss,
+              icon: Icon(Icons.close, color: scheme.onSecondaryContainer),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({
+    required this.message,
+    required this.canRetry,
+    required this.onRetry,
+    required this.onManualAdd,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final bool canRetry;
+  final VoidCallback onRetry;
+  final VoidCallback onManualAdd;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Material(
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.error_outline, color: scheme.onErrorContainer),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: scheme.onErrorContainer,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Hata mesajını kapat',
+                  constraints: const BoxConstraints(
+                    minWidth: 48,
+                    minHeight: 48,
+                  ),
+                  onPressed: onDismiss,
+                  icon: Icon(Icons.close, color: scheme.onErrorContainer),
+                ),
+              ],
+            ),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                if (canRetry)
+                  TextButton(
+                    onPressed: onRetry,
+                    child: const Text('Tekrar dene'),
+                  ),
+                TextButton(
+                  onPressed: onManualAdd,
+                  child: const Text('Manuel ekle'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InputBar extends StatelessWidget {
+  const _InputBar({
+    required this.controller,
+    required this.isBusy,
+    required this.onSend,
+    required this.onCameraTap,
+  });
+
+  final TextEditingController controller;
+  final bool isBusy;
+  final VoidCallback onSend;
+  final VoidCallback onCameraTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: scheme.surfaceContainerLow,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: Row(
+            children: [
+              IconButton(
+                tooltip: 'Fiş fotoğrafı ekle',
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: isBusy ? null : onCameraTap,
+                icon: const Icon(Icons.photo_camera_outlined),
+              ),
+              const IconButton(
+                tooltip: 'Sesli komut (yakında)',
+                constraints: BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: null,
+                icon: Icon(Icons.mic_none_outlined),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: controller,
+                  enabled: !isBusy,
+                  minLines: 1,
+                  maxLines: 3,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => onSend(),
+                  decoration: const InputDecoration(
+                    hintText: 'Harcama veya gelir yazın…',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 10,
+                    ),
+                  ),
+                ),
+              ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: controller,
+                builder: (context, value, _) {
+                  final canSend = !isBusy && value.text.trim().isNotEmpty;
+                  return IconButton(
+                    tooltip: 'Gönder',
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    onPressed: canSend ? onSend : null,
+                    icon: const Icon(Icons.send),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
