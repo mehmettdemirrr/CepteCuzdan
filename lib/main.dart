@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
@@ -7,9 +8,18 @@ import 'app/app.dart';
 import 'app/providers.dart';
 import 'core/db/app_database.dart';
 import 'features/budget/alert_notifier.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Firebase başlatılamazsa uygulama yine açılsın (manuel kayıt çalışmaya devam eder).
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase başlatılamadı: $e');
+  }
   await initializeDateFormatting('tr_TR');
   Intl.defaultLocale = 'tr_TR';
   final db = await AppDatabase.open();

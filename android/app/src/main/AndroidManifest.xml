@@ -1,6 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Bütçe uyarı bildirimleri (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Gemini / Firebase AI Logic ağ erişimi (release derlemelerinde zorunlu) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="CepteCüzdan"
         android:name="${applicationName}"
