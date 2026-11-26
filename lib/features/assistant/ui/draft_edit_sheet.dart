@@ -183,172 +183,175 @@ class _DraftEditSheetState extends State<_DraftEditSheet> {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
     final options = _optionsFor(_type);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
-      child: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Taslağı düzenle',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 12),
-              SegmentedButton<TxType>(
-                segments: const [
-                  ButtonSegment(value: TxType.expense, label: Text('Gider')),
-                  ButtonSegment(value: TxType.income, label: Text('Gelir')),
-                ],
-                selected: {_type},
-                onSelectionChanged: (sel) {
-                  final next = sel.first;
-                  setState(() {
-                    _type = next;
-                    _categoryName = _resolveCategoryForType(
-                      _categoryName,
-                      next,
-                    );
-                  });
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _amountCtrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Taslağı düzenle',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
-                decoration: const InputDecoration(
-                  labelText: 'Tutar (TL)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                SegmentedButton<TxType>(
+                  segments: const [
+                    ButtonSegment(value: TxType.expense, label: Text('Gider')),
+                    ButtonSegment(value: TxType.income, label: Text('Gelir')),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (sel) {
+                    final next = sel.first;
+                    setState(() {
+                      _type = next;
+                      _categoryName = _resolveCategoryForType(
+                        _categoryName,
+                        next,
+                      );
+                    });
+                  },
                 ),
-                validator: (value) {
-                  final kurus = parseTlToKurus(value ?? '');
-                  if (kurus == null || kurus <= 0) {
-                    return 'Geçerli ve pozitif bir tutar girin.';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: options.contains(_categoryName)
-                    ? _categoryName
-                    : options.first,
-                decoration: const InputDecoration(
-                  labelText: 'Kategori',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _amountCtrl,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Tutar (TL)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    final kurus = parseTlToKurus(value ?? '');
+                    if (kurus == null || kurus <= 0) {
+                      return 'Geçerli ve pozitif bir tutar girin.';
+                    }
+                    return null;
+                  },
                 ),
-                items: [
-                  for (final name in options)
-                    DropdownMenuItem(value: name, child: Text(name)),
-                ],
-                onChanged: (v) {
-                  if (v != null) setState(() => _categoryName = v);
-                },
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _merchantCtrl,
-                decoration: const InputDecoration(
-                  labelText: 'İşletme / Kaynak (isteğe bağlı)',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: options.contains(_categoryName)
+                      ? _categoryName
+                      : options.first,
+                  decoration: const InputDecoration(
+                    labelText: 'Kategori',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    for (final name in options)
+                      DropdownMenuItem(value: name, child: Text(name)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _categoryName = v);
+                  },
                 ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  alignment: Alignment.centerLeft,
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _merchantCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'İşletme / Kaynak (isteğe bağlı)',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-                onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today_outlined),
-                label: Text('Tarih: ${toDbDate(_date)}'),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Ürün kalemleri',
-                      style: Theme.of(context).textTheme.titleSmall,
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    alignment: Alignment.centerLeft,
+                  ),
+                  onPressed: _pickDate,
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  label: Text('Tarih: ${toDbDate(_date)}'),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Ürün kalemleri',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                     ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _addItemRow,
-                    icon: const Icon(Icons.add),
-                    label: const Text('Kalem ekle'),
-                  ),
-                ],
-              ),
-              for (var i = 0; i < _itemRows.length; i++)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          controller: _itemRows[i].nameCtrl,
-                          decoration: const InputDecoration(
-                            labelText: 'Ürün',
-                            isDense: true,
-                            border: OutlineInputBorder(),
+                    TextButton.icon(
+                      onPressed: _addItemRow,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Kalem ekle'),
+                    ),
+                  ],
+                ),
+                for (var i = 0; i < _itemRows.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextFormField(
+                            controller: _itemRows[i].nameCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'Ürün',
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          controller: _itemRows[i].priceCtrl,
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          decoration: const InputDecoration(
-                            labelText: 'Tutar (TL)',
-                            isDense: true,
-                            border: OutlineInputBorder(),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: _itemRows[i].priceCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Tutar (TL)',
+                              isDense: true,
+                              border: OutlineInputBorder(),
+                            ),
                           ),
                         ),
-                      ),
-                      IconButton(
-                        tooltip: 'Kalemi sil',
-                        constraints: const BoxConstraints(
-                          minWidth: 48,
-                          minHeight: 48,
+                        IconButton(
+                          tooltip: 'Kalemi sil',
+                          constraints: const BoxConstraints(
+                            minWidth: 48,
+                            minHeight: 48,
+                          ),
+                          onPressed: () => _removeItemRow(i),
+                          icon: const Icon(Icons.delete_outline),
                         ),
-                        onPressed: () => _removeItemRow(i),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Vazgeç'),
+                    ),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
+                      onPressed: _submit,
+                      child: const Text('Taslağı güncelle'),
+                    ),
+                  ],
                 ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                alignment: WrapAlignment.end,
-                children: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('Vazgeç'),
-                  ),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                    ),
-                    onPressed: _submit,
-                    child: const Text('Taslağı güncelle'),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
