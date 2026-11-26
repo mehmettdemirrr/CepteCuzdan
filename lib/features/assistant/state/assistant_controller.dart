@@ -13,6 +13,7 @@ import '../../transactions/transaction_provider.dart';
 import '../services/gemini/expense_draft_service.dart';
 import '../services/gemini/parsed_expense_draft.dart';
 import '../services/ocr/ocr_service.dart';
+import '../services/speech/speech_service.dart';
 
 /// Onay bekleyen bellek içi işlem taslağı.
 /// Kullanıcı onaylamadan veritabanına yazılmaz ve sohbet mesajına JSON olarak gömülmez.
@@ -53,6 +54,7 @@ class AssistantController extends ChangeNotifier {
     required this.categories,
     required this.draftService,
     required this.receiptPipeline,
+    this.speechService,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now {
     _lastKnownRevision = transactions.revision;
@@ -64,16 +66,20 @@ class AssistantController extends ChangeNotifier {
   final CategoryProvider categories;
   final ExpenseDraftService draftService;
   final ReceiptDraftPipeline receiptPipeline;
+  final SpeechService? speechService;
   final DateTime Function() _now;
 
   List<ChatMessage> _messages = const [];
   bool _isLoadingHistory = false;
   bool _isBusy = false;
+  bool _isListening = false;
+  String _partialSpeechText = '';
   bool _isSavingDraft = false;
   String? _errorMessage;
   String? _saveErrorMessage;
   PendingDraft? _pendingDraft;
   String? _lastFailedText;
+  TxSource _lastFailedTextSource = TxSource.chat;
   ReceiptImageSource? _lastFailedReceiptSource;
   int _lastKnownRevision = 0;
   int _draftSeq = 0;
@@ -82,6 +88,9 @@ class AssistantController extends ChangeNotifier {
   List<ChatMessage> get messages => _messages;
   bool get isLoadingHistory => _isLoadingHistory;
   bool get isBusy => _isBusy;
+  bool get isListening => _isListening;
+  String get partialSpeechText => _partialSpeechText;
+  bool get hasVoiceSupport => speechService != null;
   bool get isSavingDraft => _isSavingDraft;
   String? get errorMessage => _errorMessage;
   String? get saveErrorMessage => _saveErrorMessage;
@@ -148,9 +157,12 @@ class AssistantController extends ChangeNotifier {
     TxType.income: categories.ofType(TxType.income).map((c) => c.name).toList(),
   };
 
-  /// Yazılı mesaj gönderir ve Gemini üzerinden bellek içi taslak üretir.
+  /// Yazılı veya sesli metin gönderir ve Gemini üzerinden bellek içi taslak üretir.
   /// Aynı anda yalnızca tek istek çalışır.
-  Future<void> sendText(String rawText) async {
+  Future<void> sendText(
+    String rawText, {
+    TxSource source = TxSource.chat,
+  }) async {
     final trimmed = rawText.trim();
     if (trimmed.isEmpty || _isBusy) return;
 
@@ -171,7 +183,7 @@ class AssistantController extends ChangeNotifier {
         rawText: trimmed,
         today: _now(),
         categoriesByType: _categoriesByType(),
-        source: TxSource.chat,
+        source: source,
       );
 
       switch (result) {
@@ -180,6 +192,7 @@ class AssistantController extends ChangeNotifier {
         case ExpenseDraftFailure(:final error):
           _errorMessage = error.userMessage;
           _lastFailedText = trimmed;
+          _lastFailedTextSource = source;
       }
     } catch (e) {
       debugPrint(
@@ -187,10 +200,70 @@ class AssistantController extends ChangeNotifier {
       );
       _errorMessage = 'İşlem sırasında bir hata oluştu. Tekrar deneyebilir veya manuel ekleyebilirsiniz.';
       _lastFailedText = trimmed;
+      _lastFailedTextSource = source;
     } finally {
       _isBusy = false;
       _safeNotify();
     }
+  }
+
+  /// Türkçe sesli komut dinlemesini başlatır veya durdurur.
+  /// Sonuç metni aynı Gemini hattından (`source: TxSource.voice`) geçirilir.
+  Future<void> toggleVoiceInput() async {
+    final service = speechService;
+    if (service == null || _isBusy || _isSavingDraft) return;
+
+    if (_isListening) {
+      await service.stopListening();
+      _isListening = false;
+      _partialSpeechText = '';
+      _safeNotify();
+      return;
+    }
+
+    _errorMessage = null;
+    _partialSpeechText = '';
+    _safeNotify();
+
+    final startError = await service.startListening(
+      onPartial: (partial) {
+        _partialSpeechText = partial;
+        _safeNotify();
+      },
+      onFinal: (finalText) {
+        _isListening = false;
+        _partialSpeechText = '';
+        _safeNotify();
+        sendText(finalText, source: TxSource.voice);
+      },
+      onError: (error) {
+        _isListening = false;
+        _partialSpeechText = '';
+        _errorMessage = error.userMessage;
+        _safeNotify();
+      },
+    );
+
+    if (startError != null) {
+      _isListening = false;
+      _partialSpeechText = '';
+      _errorMessage = startError.userMessage;
+      _safeNotify();
+      return;
+    }
+
+    _isListening = true;
+    _safeNotify();
+  }
+
+  /// Devam eden ses dinlemesini iptal eder; Gemini çağrılmaz.
+  Future<void> cancelVoiceInput() async {
+    final service = speechService;
+    if (service == null) return;
+    await service.cancelListening();
+    _isListening = false;
+    _partialSpeechText = '';
+    _safeNotify();
   }
 
   /// Kamera veya galeriden fiş seçip cihaz içi OCR + Gemini ile taslak üretir.
@@ -395,7 +468,7 @@ class AssistantController extends ChangeNotifier {
     final failedText = _lastFailedText;
     final failedSource = _lastFailedReceiptSource;
     if (failedText != null) {
-      await sendText(failedText);
+      await sendText(failedText, source: _lastFailedTextSource);
     } else if (failedSource != null) {
       await scanReceipt(failedSource);
     }
@@ -429,6 +502,9 @@ class AssistantController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (_isListening) {
+      speechService?.cancelListening();
+    }
     transactions.removeListener(_onTransactionsChanged);
     super.dispose();
   }

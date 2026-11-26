@@ -168,6 +168,12 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     onEdit: _handleEditPendingDraft,
                     onCancel: controller.clearPendingDraft,
                   ),
+                if (controller.isListening)
+                  _VoiceListeningBanner(
+                    partialText: controller.partialSpeechText,
+                    onStop: controller.toggleVoiceInput,
+                    onCancel: controller.cancelVoiceInput,
+                  ),
                 if (controller.errorMessage != null)
                   _ErrorBanner(
                     message: controller.errorMessage!,
@@ -180,8 +186,11 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 _InputBar(
                   controller: _inputController,
                   isBusy: controller.isBusy,
+                  isListening: controller.isListening,
+                  hasVoiceSupport: controller.hasVoiceSupport,
                   onSend: _handleSend,
                   onCameraTap: _showReceiptSourceSheet,
+                  onMicTap: controller.toggleVoiceInput,
                 ),
               ],
             ),
@@ -374,18 +383,71 @@ class _ErrorBanner extends StatelessWidget {
   }
 }
 
+class _VoiceListeningBanner extends StatelessWidget {
+  const _VoiceListeningBanner({
+    required this.partialText,
+    required this.onStop,
+    required this.onCancel,
+  });
+
+  final String partialText;
+  final VoidCallback onStop;
+  final VoidCallback onCancel;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Material(
+      color: scheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Icon(Icons.mic, color: scheme.onPrimaryContainer),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                partialText.isEmpty
+                    ? 'Dinleniyor… Türkçe konuşabilirsiniz.'
+                    : partialText,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: scheme.onPrimaryContainer,
+                ),
+              ),
+            ),
+            TextButton(onPressed: onStop, child: const Text('Bitir')),
+            IconButton(
+              tooltip: 'Dinlemeyi iptal et',
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: onCancel,
+              icon: Icon(Icons.close, color: scheme.onPrimaryContainer),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _InputBar extends StatelessWidget {
   const _InputBar({
     required this.controller,
     required this.isBusy,
+    required this.isListening,
+    required this.hasVoiceSupport,
     required this.onSend,
     required this.onCameraTap,
+    required this.onMicTap,
   });
 
   final TextEditingController controller;
   final bool isBusy;
+  final bool isListening;
+  final bool hasVoiceSupport;
   final VoidCallback onSend;
   final VoidCallback onCameraTap;
+  final VoidCallback onMicTap;
 
   @override
   Widget build(BuildContext context) {
@@ -401,19 +463,26 @@ class _InputBar extends StatelessWidget {
               IconButton(
                 tooltip: 'Fiş fotoğrafı ekle',
                 constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-                onPressed: isBusy ? null : onCameraTap,
+                onPressed: isBusy || isListening ? null : onCameraTap,
                 icon: const Icon(Icons.photo_camera_outlined),
               ),
-              const IconButton(
-                tooltip: 'Sesli komut (yakında)',
-                constraints: BoxConstraints(minWidth: 48, minHeight: 48),
-                onPressed: null,
-                icon: Icon(Icons.mic_none_outlined),
+              IconButton(
+                tooltip: !hasVoiceSupport
+                    ? 'Sesli komut (yakında)'
+                    : isListening
+                    ? 'Dinlemeyi durdur'
+                    : 'Sesli komut',
+                constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+                onPressed: !hasVoiceSupport || isBusy ? null : onMicTap,
+                icon: Icon(
+                  isListening ? Icons.mic : Icons.mic_none_outlined,
+                  color: isListening ? scheme.error : null,
+                ),
               ),
               Expanded(
                 child: TextField(
                   controller: controller,
-                  enabled: !isBusy,
+                  enabled: !isBusy && !isListening,
                   minLines: 1,
                   maxLines: 3,
                   textInputAction: TextInputAction.send,
@@ -432,7 +501,8 @@ class _InputBar extends StatelessWidget {
               ValueListenableBuilder<TextEditingValue>(
                 valueListenable: controller,
                 builder: (context, value, _) {
-                  final canSend = !isBusy && value.text.trim().isNotEmpty;
+                  final canSend =
+                      !isBusy && !isListening && value.text.trim().isNotEmpty;
                   return IconButton(
                     tooltip: 'Gönder',
                     constraints: const BoxConstraints(
