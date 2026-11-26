@@ -112,4 +112,7 @@ Veritabanı sürümü `AppDatabase.version` (şu an 2: bütçe tekilliği indeks
 
 ## Öneriler
 
-_(Sözleşme değişikliği önerileri buraya: tarih, öneren, gerekçe.)_
+- **2026-11-26 — Berkay:**
+  1. **Onay kartı "Düzenle" akışı:** `TransactionFormScreen` fiş kalemlerini (`ReceiptItem`) taşımıyor ve yeni kaydın `id`'sini döndürmüyor. Bu nedenle asistan modülü, onay kartındaki "Düzenle" için kendi düzenleme alt sayfasını kullanacak; kayıt `TransactionProvider.add(tx, items: items)` üzerinden yapılıp dönen `id` ile `ChatMessageRepository.linkTransaction` çağrılacak.
+  2. **Fiş fotoğrafı temizliği ("Verileri sıfırla"):** Verileri sıfırlama akışı sohbet geçmişini siliyor ancak cihazdaki fiş görsellerini silmiyor. Fiş fotoğrafları uygulama içi ayrı bir dizinde (`receipts/`) saklanıp sıfırlama / `TransactionProvider.revision` sonrası asistan modülü tarafından temizlenecek (gerekirse ortak bir temizlik kancası eklenebilir).
+  3. **Kategori–işlem tür uyumu (`category.type == tx.type`):** `SqliteTransactionRepository.add` kategori varlığını doğruluyor ancak kategori türünün işlem türüyle (`income`/`expense`) eşleşip eşleşmediğini kontrol etmiyor. Asistan doğrulaması tür uyumunu istemcide kontrol edip uyumsuzsa aynı türdeki `"Diğer"` kategorisine düşecek; veri katmanında da ek doğrulama istenirse birlikte değerlendirilebilir.
