@@ -224,6 +224,9 @@ void main() {
           MediaQuery(
             data: MediaQueryData(
               size: logicalSize,
+              padding: logicalSize.width > logicalSize.height
+                  ? const EdgeInsets.only(left: 48, right: 24)
+                  : EdgeInsets.zero,
               textScaler: TextScaler.linear(textScale),
             ),
             child: MaterialApp(

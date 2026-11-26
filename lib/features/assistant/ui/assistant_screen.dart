@@ -99,49 +99,53 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Asistan')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 840),
-          child: Column(
-            children: [
-              if (controller.isBusy) const LinearProgressIndicator(),
-              Expanded(
-                child: controller.isLoadingHistory && messages.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
-                    : messages.isEmpty
-                    ? const _EmptyAssistantView()
-                    : ListView.builder(
-                        controller: _scrollController,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 8,
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 840),
+            child: Column(
+              children: [
+                if (controller.isBusy) const LinearProgressIndicator(),
+                Expanded(
+                  child: controller.isLoadingHistory && messages.isEmpty
+                      ? const Center(child: CircularProgressIndicator())
+                      : messages.isEmpty
+                      ? const _EmptyAssistantView()
+                      : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                          itemCount: messages.length,
+                          itemBuilder: (context, index) =>
+                              _MessageBubble(message: messages[index]),
                         ),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) =>
-                            _MessageBubble(message: messages[index]),
-                      ),
-              ),
-              if (controller.pendingDraft != null)
-                _PendingDraftBanner(
-                  pending: controller.pendingDraft!,
-                  onDismiss: controller.clearPendingDraft,
                 ),
-              if (controller.errorMessage != null)
-                _ErrorBanner(
-                  message: controller.errorMessage!,
-                  canRetry: controller.canRetry && !controller.isBusy,
-                  onRetry: controller.retryLast,
-                  onManualAdd: () =>
-                      AppShell.selectTab(context, AppShell.transactionsTab),
-                  onDismiss: controller.clearError,
+                if (controller.pendingDraft != null)
+                  _PendingDraftBanner(
+                    pending: controller.pendingDraft!,
+                    onDismiss: controller.clearPendingDraft,
+                  ),
+                if (controller.errorMessage != null)
+                  _ErrorBanner(
+                    message: controller.errorMessage!,
+                    canRetry: controller.canRetry && !controller.isBusy,
+                    onRetry: controller.retryLast,
+                    onManualAdd: () =>
+                        AppShell.selectTab(context, AppShell.transactionsTab),
+                    onDismiss: controller.clearError,
+                  ),
+                _InputBar(
+                  controller: _inputController,
+                  isBusy: controller.isBusy,
+                  onSend: _handleSend,
+                  onCameraTap: _showReceiptSourceSheet,
                 ),
-              _InputBar(
-                controller: _inputController,
-                isBusy: controller.isBusy,
-                onSend: _handleSend,
-                onCameraTap: _showReceiptSourceSheet,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
