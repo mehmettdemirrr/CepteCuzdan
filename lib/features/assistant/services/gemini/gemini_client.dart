@@ -4,7 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 /// Firebase AI Logic üzerinden kullanılan güncel kararlı Flash modeli.
 /// Tek sabit: model değiştiğinde yalnızca burası güncellenir.
 /// Kaynak: firebase.google.com/docs/ai-logic/models (Kasım 2026).
-const String geminiModelName = 'gemini-3.8-flash';
+const String geminiModelName = 'gemini-3.5-flash-lite';
 
 /// Firebase başlatılmadan AI çağrısı yapıldığında fırlatılır.
 class FirebaseNotInitializedException implements Exception {
