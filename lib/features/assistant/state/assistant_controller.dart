@@ -13,6 +13,7 @@ import '../../transactions/transaction_provider.dart';
 import '../services/gemini/expense_draft_service.dart';
 import '../services/gemini/parsed_expense_draft.dart';
 import '../services/ocr/ocr_service.dart';
+import '../services/query/budget_query_service.dart';
 import '../services/speech/speech_service.dart';
 
 /// Onay bekleyen bellek içi işlem taslağı.
@@ -55,6 +56,7 @@ class AssistantController extends ChangeNotifier {
     required this.draftService,
     required this.receiptPipeline,
     this.speechService,
+    this.budgetQueryService,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now {
     _lastKnownRevision = transactions.revision;
@@ -67,6 +69,7 @@ class AssistantController extends ChangeNotifier {
   final ExpenseDraftService draftService;
   final ReceiptDraftPipeline receiptPipeline;
   final SpeechService? speechService;
+  final BudgetQueryService? budgetQueryService;
   final DateTime Function() _now;
 
   List<ChatMessage> _messages = const [];
@@ -178,6 +181,23 @@ class AssistantController extends ChangeNotifier {
       );
       _messages = await chats.all();
       _safeNotify();
+
+      // Bütçe/harcama sorusuysa yerelde hesapla; Gemini'yi çağırma.
+      final localAnswer = await budgetQueryService?.tryAnswer(
+        trimmed,
+        now: _now(),
+      );
+      if (localAnswer != null) {
+        await chats.add(
+          ChatMessage(
+            role: ChatRole.assistant,
+            content: localAnswer,
+            createdAt: _now(),
+          ),
+        );
+        _messages = await chats.all();
+        return;
+      }
 
       final result = await draftService.extractDraft(
         rawText: trimmed,
