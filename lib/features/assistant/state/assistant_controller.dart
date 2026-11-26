@@ -1,8 +1,12 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 
 import '../../../core/format/money.dart';
+import '../../../core/format/text.dart';
+import '../../../core/models/category.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/enums.dart';
+import '../../../core/models/receipt_item.dart';
+import '../../../core/models/transaction_record.dart';
 import '../../../core/repositories/chat_message_repository.dart';
 import '../../transactions/category_provider.dart';
 import '../../transactions/transaction_provider.dart';
@@ -14,14 +18,30 @@ import '../services/ocr/ocr_service.dart';
 /// Kullanıcı onaylamadan veritabanına yazılmaz ve sohbet mesajına JSON olarak gömülmez.
 class PendingDraft {
   const PendingDraft({
+    required this.draftId,
     required this.draft,
     this.assistantMessageId,
     this.receiptPath,
+    this.isSaved = false,
   });
 
+  final String draftId;
   final ParsedExpenseDraft draft;
   final int? assistantMessageId;
   final String? receiptPath;
+  final bool isSaved;
+
+  PendingDraft copyWith({
+    ParsedExpenseDraft? draft,
+    int? assistantMessageId,
+    bool? isSaved,
+  }) => PendingDraft(
+    draftId: draftId,
+    draft: draft ?? this.draft,
+    assistantMessageId: assistantMessageId ?? this.assistantMessageId,
+    receiptPath: receiptPath,
+    isSaved: isSaved ?? this.isSaved,
+  );
 }
 
 /// Asistan sohbet ekranının durum yöneticisi.
@@ -49,17 +69,22 @@ class AssistantController extends ChangeNotifier {
   List<ChatMessage> _messages = const [];
   bool _isLoadingHistory = false;
   bool _isBusy = false;
+  bool _isSavingDraft = false;
   String? _errorMessage;
+  String? _saveErrorMessage;
   PendingDraft? _pendingDraft;
   String? _lastFailedText;
   ReceiptImageSource? _lastFailedReceiptSource;
   int _lastKnownRevision = 0;
+  int _draftSeq = 0;
   bool _disposed = false;
 
   List<ChatMessage> get messages => _messages;
   bool get isLoadingHistory => _isLoadingHistory;
   bool get isBusy => _isBusy;
+  bool get isSavingDraft => _isSavingDraft;
   String? get errorMessage => _errorMessage;
+  String? get saveErrorMessage => _saveErrorMessage;
   PendingDraft? get pendingDraft => _pendingDraft;
   bool get canRetry =>
       _lastFailedText != null || _lastFailedReceiptSource != null;
@@ -220,10 +245,15 @@ class AssistantController extends ChangeNotifier {
     ParsedExpenseDraft draft, {
     required String? receiptPath,
   }) async {
-    final previousPath = _pendingDraft?.receiptPath;
-    if (previousPath != null && previousPath != receiptPath) {
+    final previous = _pendingDraft;
+    if (previous != null &&
+        !previous.isSaved &&
+        previous.receiptPath != null &&
+        previous.receiptPath != receiptPath) {
       try {
-        await receiptPipeline.scanService.storage.deleteReceipt(previousPath);
+        await receiptPipeline.scanService.storage.deleteReceipt(
+          previous.receiptPath!,
+        );
       } catch (e) {
         debugPrint(
           'AssistantController: Önceki fiş temizlenemedi (${e.runtimeType})',
@@ -240,11 +270,113 @@ class AssistantController extends ChangeNotifier {
       ),
     );
     _messages = await chats.all();
+    _saveErrorMessage = null;
     _pendingDraft = PendingDraft(
+      draftId: 'draft_${++_draftSeq}',
       draft: draft,
       assistantMessageId: msgId,
       receiptPath: receiptPath,
     );
+  }
+
+  /// Düzenle alt sayfasından gelen güncel taslağı bellekte günceller.
+  void updatePendingDraft(ParsedExpenseDraft updated) {
+    final current = _pendingDraft;
+    if (current == null || current.isSaved) return;
+    _pendingDraft = current.copyWith(draft: updated);
+    _saveErrorMessage = null;
+    _safeNotify();
+  }
+
+  Category? _resolveCategory(String categoryName, TxType type) {
+    final list = categories.ofType(type);
+    if (list.isEmpty) return null;
+    final target = foldTr(categoryName);
+    for (final c in list) {
+      if (foldTr(c.name) == target) return c;
+    }
+    final other = foldTr('Diğer');
+    for (final c in list) {
+      if (foldTr(c.name) == other) return c;
+    }
+    return list.first;
+  }
+
+  /// Onay kartındaki taslağı yalnızca [TransactionProvider.add] üzerinden
+  /// güvenli biçimde kaydeder. Çift tıklama ve mükerrer kayda karşı korumalıdır.
+  Future<bool> confirmAndSavePendingDraft() async {
+    final pending = _pendingDraft;
+    if (pending == null || pending.isSaved || _isSavingDraft) return false;
+
+    _isSavingDraft = true;
+    _saveErrorMessage = null;
+    _safeNotify();
+
+    try {
+      if (!categories.loaded) {
+        await categories.load();
+      }
+      final draft = pending.draft;
+      final amountKurus = tlToKurus(draft.amountTl);
+      if (amountKurus <= 0) {
+        _saveErrorMessage = 'Tutar sıfırdan büyük olmalıdır.';
+        return false;
+      }
+
+      final category = _resolveCategory(draft.categoryName, draft.type);
+      if (category?.id == null) {
+        _saveErrorMessage =
+            'Kategori bulunamadı. Lütfen düzenleyip tekrar deneyin.';
+        return false;
+      }
+
+      final record = TransactionRecord(
+        type: draft.type,
+        amount: amountKurus,
+        categoryId: category!.id!,
+        date: draft.date,
+        merchant: draft.merchant,
+        source: draft.source,
+        receiptPath: pending.receiptPath,
+        createdAt: _now(),
+      );
+
+      final items = draft.items
+          .map(
+            (i) => ReceiptItem(
+              name: i.name,
+              quantity: i.quantity,
+              price: tlToKurus(i.priceTl),
+            ),
+          )
+          .where((i) => i.price > 0)
+          .toList();
+
+      final txId = await transactions.add(record, items: items);
+
+      if (pending.assistantMessageId != null) {
+        try {
+          await chats.linkTransaction(pending.assistantMessageId!, txId);
+        } catch (e) {
+          debugPrint(
+            'AssistantController: Mesaj işleme bağlanamadı (${e.runtimeType})',
+          );
+        }
+      }
+
+      _messages = await chats.all();
+      if (_pendingDraft?.draftId == pending.draftId) {
+        _pendingDraft = pending.copyWith(isSaved: true);
+      }
+      return true;
+    } catch (e) {
+      debugPrint('AssistantController: Kayıt hatası (${e.runtimeType})');
+      _saveErrorMessage = 'İşlem kaydedilemedi. Tekrar deneyebilirsiniz.';
+      return false;
+    } finally {
+      _isSavingDraft = false;
+      _safeNotify();
+    }
   }
 
   String _formatDraftSummary(ParsedExpenseDraft draft) {
@@ -271,12 +403,15 @@ class AssistantController extends ChangeNotifier {
 
   /// Bellek içi bekleyen taslağı iptal eder (kaydedilmemiş fiş görselini de siler).
   Future<void> clearPendingDraft() async {
-    final path = _pendingDraft?.receiptPath;
+    final current = _pendingDraft;
     _pendingDraft = null;
+    _saveErrorMessage = null;
     _safeNotify();
-    if (path != null) {
+    if (current != null && !current.isSaved && current.receiptPath != null) {
       try {
-        await receiptPipeline.scanService.storage.deleteReceipt(path);
+        await receiptPipeline.scanService.storage.deleteReceipt(
+          current.receiptPath!,
+        );
       } catch (e) {
         debugPrint(
           'AssistantController: İptal edilen fiş silinemedi (${e.runtimeType})',

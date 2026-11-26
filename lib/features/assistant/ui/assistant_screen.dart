@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../app/shell.dart';
-import '../../../core/format/dates.dart';
-import '../../../core/format/money.dart';
 import '../../../core/models/chat_message.dart';
 import '../../../core/models/enums.dart';
+import '../../transactions/category_provider.dart';
 import '../services/ocr/ocr_service.dart';
 import '../state/assistant_controller.dart';
+import 'confirmation_card.dart';
+import 'draft_edit_sheet.dart';
 
 /// Asistan sohbet ekranı.
 /// 5 ekran durumunda (dikey, küçük, yatay 800×360, geniş, 2× yazı) taşmadan çalışır.
@@ -85,6 +86,40 @@ class _AssistantScreenState extends State<AssistantScreen> {
     await controller.scanReceipt(selected);
   }
 
+  Future<void> _handleEditPendingDraft() async {
+    final controller = context.read<AssistantController>();
+    final categories = context.read<CategoryProvider>();
+    final pending = controller.pendingDraft;
+    if (pending == null || pending.isSaved || controller.isSavingDraft) return;
+
+    final categoriesByType = {
+      TxType.expense: categories
+          .ofType(TxType.expense)
+          .map((c) => c.name)
+          .toList(),
+      TxType.income: categories
+          .ofType(TxType.income)
+          .map((c) => c.name)
+          .toList(),
+    };
+
+    final updated = await showDraftEditSheet(
+      context,
+      initial: pending.draft,
+      categoriesByType: categoriesByType,
+    );
+    if (updated == null || !mounted) return;
+    controller.updatePendingDraft(updated);
+  }
+
+  Future<void> _handleSavePendingDraft() async {
+    final controller = context.read<AssistantController>();
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = await controller.confirmAndSavePendingDraft();
+    if (!saved || !mounted) return;
+    messenger.showSnackBar(const SnackBar(content: Text('İşlem kaydedildi.')));
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller = context.watch<AssistantController>();
@@ -125,9 +160,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
                         ),
                 ),
                 if (controller.pendingDraft != null)
-                  _PendingDraftBanner(
+                  ConfirmationCard(
                     pending: controller.pendingDraft!,
-                    onDismiss: controller.clearPendingDraft,
+                    isSaving: controller.isSavingDraft,
+                    saveErrorMessage: controller.saveErrorMessage,
+                    onSave: _handleSavePendingDraft,
+                    onEdit: _handleEditPendingDraft,
+                    onCancel: controller.clearPendingDraft,
                   ),
                 if (controller.errorMessage != null)
                   _ErrorBanner(
@@ -256,52 +295,6 @@ class _MessageBubble extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PendingDraftBanner extends StatelessWidget {
-  const _PendingDraftBanner({required this.pending, required this.onDismiss});
-
-  final PendingDraft pending;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final draft = pending.draft;
-    final amountText = formatKurus(tlToKurus(draft.amountTl));
-    final typeText = draft.type == TxType.income ? 'Gelir' : 'Gider';
-
-    return Material(
-      color: scheme.secondaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              color: scheme.onSecondaryContainer,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Bekleyen taslak: $amountText · ${draft.categoryName} ($typeText) · ${toDbDate(draft.date)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onSecondaryContainer,
-                ),
-              ),
-            ),
-            IconButton(
-              tooltip: 'Taslağı kapat',
-              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-              onPressed: onDismiss,
-              icon: Icon(Icons.close, color: scheme.onSecondaryContainer),
-            ),
-          ],
         ),
       ),
     );
