@@ -16,6 +16,7 @@ import '../core/repositories/transaction_repository.dart';
 import '../features/assistant/services/gemini/expense_draft_service.dart';
 import '../features/assistant/services/gemini/gemini_client.dart';
 import '../features/assistant/services/ocr/ocr_service.dart';
+import '../features/assistant/services/query/budget_query_service.dart';
 import '../features/assistant/services/speech/speech_service.dart';
 import '../features/assistant/state/assistant_controller.dart';
 import '../features/budget/alert_notifier.dart';
@@ -140,6 +141,10 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
             draftService: draftService,
             receiptPipeline: receiptPipeline,
             speechService: DeviceSpeechService(),
+            budgetQueryService: BudgetQueryService(
+              transactions: deps.txs,
+              categories: deps.categories,
+            ),
           )..loadHistory();
         },
       ),
