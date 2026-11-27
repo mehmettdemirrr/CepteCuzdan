@@ -72,9 +72,7 @@ class FakeTransactionRepository implements TransactionRepository {
     TransactionRecord tx, {
     List<ReceiptItem> items = const [],
   }) async {
-    if (!_s.categories.any((c) => c.id == tx.categoryId)) {
-      throw ArgumentError.value(tx.categoryId, 'categoryId', 'kategori yok');
-    }
+    _checkCategory(tx);
     final id = _s.nextId();
     _s.transactions.add(tx.copyWith(id: id));
     for (final i in items) {
@@ -85,8 +83,24 @@ class FakeTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> update(TransactionRecord tx) async {
+    _checkCategory(tx);
     final i = _s.transactions.indexWhere((t) => t.id == tx.id);
     if (i >= 0) _s.transactions[i] = tx;
+  }
+
+  /// SQLite ile aynı: kategori yoksa ya da türü uyuşmuyorsa ArgumentError.
+  void _checkCategory(TransactionRecord tx) {
+    final c = _s.categories.where((c) => c.id == tx.categoryId).firstOrNull;
+    if (c == null) {
+      throw ArgumentError.value(tx.categoryId, 'categoryId', 'kategori yok');
+    }
+    if (c.type != tx.type) {
+      throw ArgumentError.value(
+        tx.categoryId,
+        'categoryId',
+        'kategori türü işlem türüyle (${tx.type.name}) uyuşmuyor',
+      );
+    }
   }
 
   @override
