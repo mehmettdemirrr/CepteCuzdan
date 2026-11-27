@@ -32,7 +32,7 @@ Bu dosya modeller, repository arabirimleri ve asistan modülünün veri katmanı
 
 ```dart
 abstract class TransactionRepository {
-  Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}); // işlem + kalemler tek DB transaction'ı; olmayan categoryId → ArgumentError
+  Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}); // işlem + kalemler tek DB transaction'ı; olmayan categoryId ya da tür uyuşmazlığı (gelir işlemi + gider kategorisi) → ArgumentError
   Future<void> update(TransactionRecord tx);
   Future<void> delete(int id);              // kalemler silinir, bağlı sohbet mesajının transactionId'si null olur
   Future<TransactionRecord?> getById(int id);
@@ -87,7 +87,9 @@ final kurus = s.expenseByCategory[market!.id] ?? 0;
 
 ## Veri sıfırlama ve bildirimler
 
-- Ayarlar → **Verileri sıfırla** işlemleri, bütçeleri, **sohbet geçmişini** ve kullanıcı kategorilerini siler, ardından `TransactionProvider.markChanged()` çağırır. Sohbet ekranı `TransactionProvider`'ı dinleyip (`revision` değişince) geçmişi yeniden yüklemeli. Fiş fotoğrafı dosyalarını silmek asistan tarafının işi.
+- Ayarlar → **Verileri sıfırla** işlemleri, bütçeleri, **sohbet geçmişini** ve kullanıcı kategorilerini siler, ardından `TransactionProvider.markChanged()` çağırır.
+- **Sıfırlamayı anlamak için `DataResetter.resets` kullanılır** (`context.read<DataResetter>().resets`, bir `ValueListenable<int>`). Her başarılı sıfırlamada bir artar; dinleyici çağrıldığında veriler zaten silinmiştir. `TransactionProvider.revision` **her** kayıt, güncelleme, silme, bütçe kaydı ve kategori silmede değişir; "revision değişti ve sohbet boş" gibi bir tahminle sıfırlama anlaşılmaya çalışılmaz (bekleyen fiş görseli yanlış zamanda silinir).
+- Asistan `resets` değişince: bekleyen taslağı ve süren isteklerin sonuçlarını bırakır, sohbet geçmişini yeniden yükler, `receipts/` klasörünü temizler. Fiş fotoğrafı dosyalarını silmek asistan tarafının işi. Normal `revision` değişikliklerinde yalnızca geçmiş yeniden yüklenir, dosya silinmez.
 - `TransactionProvider.add` sonrası bütçe limitleri otomatik kontrol edilir; %80'e ulaşılınca ve aşılınca yerel bildirim gider (`lib/features/budget/`). Asistanın ek bir şey yapmasına gerek yok.
 
 ## Şema sürümü

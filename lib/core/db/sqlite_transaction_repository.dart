@@ -14,15 +14,7 @@ class SqliteTransactionRepository implements TransactionRepository {
   @override
   Future<int> add(TransactionRecord tx, {List<ReceiptItem> items = const []}) {
     return _db.transaction((txn) async {
-      final cat = await txn.query(
-        'categories',
-        columns: ['id'],
-        where: 'id = ?',
-        whereArgs: [tx.categoryId],
-      );
-      if (cat.isEmpty) {
-        throw ArgumentError.value(tx.categoryId, 'categoryId', 'kategori yok');
-      }
+      await _checkCategory(txn, tx);
       final id = await txn.insert('transactions', tx.toMap()..remove('id'));
       for (final item in items) {
         await txn.insert(
@@ -35,13 +27,37 @@ class SqliteTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<void> update(TransactionRecord tx) async {
-    await _db.update(
-      'transactions',
-      tx.toMap()..remove('id'),
+  Future<void> update(TransactionRecord tx) {
+    return _db.transaction((txn) async {
+      await _checkCategory(txn, tx);
+      await txn.update(
+        'transactions',
+        tx.toMap()..remove('id'),
+        where: 'id = ?',
+        whereArgs: [tx.id],
+      );
+    });
+  }
+
+  /// Kategori yoksa ya da türü işlemin türüyle (gelir/gider) uyuşmuyorsa
+  /// [ArgumentError] fırlatır.
+  Future<void> _checkCategory(DatabaseExecutor ex, TransactionRecord tx) async {
+    final rows = await ex.query(
+      'categories',
+      columns: ['type'],
       where: 'id = ?',
-      whereArgs: [tx.id],
+      whereArgs: [tx.categoryId],
     );
+    if (rows.isEmpty) {
+      throw ArgumentError.value(tx.categoryId, 'categoryId', 'kategori yok');
+    }
+    if (rows.single['type'] != tx.type.name) {
+      throw ArgumentError.value(
+        tx.categoryId,
+        'categoryId',
+        'kategori türü işlem türüyle (${tx.type.name}) uyuşmuyor',
+      );
+    }
   }
 
   @override

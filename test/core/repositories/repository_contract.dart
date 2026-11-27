@@ -267,6 +267,54 @@ void runRepositoryContract(String label, Future<RepoSet> Function() open) {
         expect(await r.txs.query(), isEmpty);
       });
 
+      test('işlem türü kategori türüyle uyuşmazsa eklenemez', () async {
+        // Gelir işlemi + gider kategorisi (Market)
+        await expectLater(
+          addTx(
+            amount: 100,
+            categoryId: await catId('Market'),
+            date: DateTime(2026, 11, 8),
+            type: TxType.income,
+          ),
+          throwsArgumentError,
+        );
+        // Gider işlemi + gelir kategorisi (Maaş)
+        await expectLater(
+          addTx(
+            amount: 100,
+            categoryId: await catId('Maaş', TxType.income),
+            date: DateTime(2026, 11, 8),
+          ),
+          throwsArgumentError,
+        );
+        expect(await r.txs.query(), isEmpty);
+      });
+
+      test('güncellemede tür uyuşmazlığı reddedilir, kayıt değişmez', () async {
+        final id = await addTx(
+          amount: 15000,
+          categoryId: await catId('Market'),
+          date: DateTime(2026, 11, 8),
+        );
+        final tx = (await r.txs.getById(id))!;
+        await expectLater(
+          r.txs.update(tx.copyWith(type: TxType.income, amount: 1)),
+          throwsArgumentError,
+        );
+        final after = (await r.txs.getById(id))!;
+        expect(after.type, TxType.expense);
+        expect(after.amount, 15000);
+
+        // Tür ve kategori birlikte değişirse geçerli
+        await r.txs.update(
+          tx.copyWith(
+            type: TxType.income,
+            categoryId: await catId('Maaş', TxType.income),
+          ),
+        );
+        expect((await r.txs.getById(id))!.type, TxType.income);
+      });
+
       test('delete işlemi ve fiş kalemlerini siler', () async {
         final id = await addTx(
           amount: 1000,
