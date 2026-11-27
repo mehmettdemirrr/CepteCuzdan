@@ -146,6 +146,8 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
               categories: deps.categories,
             ),
             dataResets: c.read<DataResetter>().resets,
+            currencyStyleProvider: () =>
+                c.read<SettingsProvider>().currencyStyle,
           )..loadHistory();
         },
       ),
