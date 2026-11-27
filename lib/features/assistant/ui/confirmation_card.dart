@@ -40,199 +40,189 @@ class ConfirmationCard extends StatelessWidget {
       TxSource.manual => 'Manuel',
     };
 
-    final screenHeight = MediaQuery.sizeOf(context).height;
-    final maxCardHeight = screenHeight < 480 ? screenHeight * 0.45 : 380.0;
-
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       color: pending.isSaved
           ? scheme.tertiaryContainer
           : scheme.surfaceContainerHigh,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxCardHeight),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    pending.isSaved
-                        ? Icons.check_circle_outline
-                        : Icons.receipt_long_outlined,
-                    color: pending.isSaved
-                        ? scheme.onTertiaryContainer
-                        : scheme.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      pending.isSaved
-                          ? 'Kaydedildi'
-                          : 'Onay bekleyen $typeLabel ($sourceLabel)',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: pending.isSaved
-                            ? scheme.onTertiaryContainer
-                            : scheme.onSurface,
-                      ),
-                    ),
-                  ),
-                  if (pending.isSaved)
-                    IconButton(
-                      tooltip: 'Kartı kapat',
-                      constraints: const BoxConstraints(
-                        minWidth: 48,
-                        minHeight: 48,
-                      ),
-                      onPressed: onCancel,
-                      icon: Icon(
-                        Icons.close,
-                        color: scheme.onTertiaryContainer,
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                amountText,
-                style: theme.textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  pending.isSaved
+                      ? Icons.check_circle_outline
+                      : Icons.receipt_long_outlined,
                   color: pending.isSaved
                       ? scheme.onTertiaryContainer
-                      : scheme.onSurface,
+                      : scheme.primary,
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    pending.isSaved
+                        ? 'Kaydedildi'
+                        : 'Onay bekleyen $typeLabel ($sourceLabel)',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: pending.isSaved
+                          ? scheme.onTertiaryContainer
+                          : scheme.onSurface,
+                    ),
+                  ),
+                ),
+                if (pending.isSaved)
+                  IconButton(
+                    tooltip: 'Kartı kapat',
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    onPressed: onCancel,
+                    icon: Icon(Icons.close, color: scheme.onTertiaryContainer),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              amountText,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: pending.isSaved
+                    ? scheme.onTertiaryContainer
+                    : scheme.onSurface,
               ),
-              const SizedBox(height: 6),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                _InfoChip(
+                  icon: Icons.category_outlined,
+                  label: draft.categoryName,
+                ),
+                _InfoChip(
+                  icon: Icons.calendar_today_outlined,
+                  label: toDbDate(draft.date),
+                ),
+                if (draft.merchant != null && draft.merchant!.trim().isNotEmpty)
+                  _InfoChip(
+                    icon: Icons.storefront_outlined,
+                    label: draft.merchant!,
+                  ),
+              ],
+            ),
+            if (draft.usedDefaultDate || draft.usedFallbackCategory) ...[
+              const SizedBox(height: 8),
               Wrap(
-                spacing: 8,
+                spacing: 6,
                 runSpacing: 4,
                 children: [
-                  _InfoChip(
-                    icon: Icons.category_outlined,
-                    label: draft.categoryName,
-                  ),
-                  _InfoChip(
-                    icon: Icons.calendar_today_outlined,
-                    label: toDbDate(draft.date),
-                  ),
-                  if (draft.merchant != null &&
-                      draft.merchant!.trim().isNotEmpty)
-                    _InfoChip(
-                      icon: Icons.storefront_outlined,
-                      label: draft.merchant!,
+                  if (draft.usedDefaultDate)
+                    _WarningNote(
+                      text: 'Tarih okunamadı, bugün seçildi.',
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  if (draft.usedFallbackCategory)
+                    _WarningNote(
+                      text: 'Kategori eşleşmedi, Diğer seçildi.',
+                      color: scheme.onSurfaceVariant,
                     ),
                 ],
               ),
-              if (draft.usedDefaultDate || draft.usedFallbackCategory) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    if (draft.usedDefaultDate)
-                      _WarningNote(
-                        text: 'Tarih okunamadı, bugün seçildi.',
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    if (draft.usedFallbackCategory)
-                      _WarningNote(
-                        text: 'Kategori eşleşmedi, Diğer seçildi.',
-                        color: scheme.onSurfaceVariant,
-                      ),
-                  ],
-                ),
-              ],
-              if (draft.items.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                const Divider(height: 1),
-                const SizedBox(height: 6),
-                Text(
-                  'Ürün kalemleri (${draft.items.length})',
-                  style: theme.textTheme.labelMedium,
-                ),
-                const SizedBox(height: 4),
-                for (final item in draft.items)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 2),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            item.quantity == 1
-                                ? item.name
-                                : '${item.name} ×${item.quantity}',
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          formatKurus(tlToKurus(item.priceTl)),
+            ],
+            if (draft.items.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 6),
+              Text(
+                'Ürün kalemleri (${draft.items.length})',
+                style: theme.textTheme.labelMedium,
+              ),
+              const SizedBox(height: 4),
+              for (final item in draft.items)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.quantity == 1
+                              ? item.name
+                              : '${item.name} ×${item.quantity}',
                           style: theme.textTheme.bodySmall,
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        formatKurus(tlToKurus(item.priceTl)),
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            if (saveErrorMessage != null) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.error_outline, size: 18, color: scheme.error),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      saveErrorMessage!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.error,
+                      ),
                     ),
                   ),
-              ],
-              if (saveErrorMessage != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.error_outline, size: 18, color: scheme.error),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        saveErrorMessage!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: scheme.error,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-              if (!pending.isSaved) ...[
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    FilledButton.icon(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(48, 48),
-                      ),
-                      onPressed: isSaving ? null : onSave,
-                      icon: isSaving
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.check),
-                      label: Text(isSaving ? 'Kaydediliyor…' : 'Kaydet'),
-                    ),
-                    OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(48, 48),
-                      ),
-                      onPressed: isSaving ? null : onEdit,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('Düzenle'),
-                    ),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(
-                        minimumSize: const Size(48, 48),
-                      ),
-                      onPressed: isSaving ? null : onCancel,
-                      icon: const Icon(Icons.close),
-                      label: const Text('İptal'),
-                    ),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ],
-          ),
+            if (!pending.isSaved) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: isSaving ? null : onSave,
+                    icon: isSaving
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.check),
+                    label: Text(isSaving ? 'Kaydediliyor…' : 'Kaydet'),
+                  ),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: isSaving ? null : onEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('Düzenle'),
+                  ),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                    ),
+                    onPressed: isSaving ? null : onCancel,
+                    icon: const Icon(Icons.close),
+                    label: const Text('İptal'),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
       ),
     );

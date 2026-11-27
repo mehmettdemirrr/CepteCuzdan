@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:cepte_cuzdan/core/models/enums.dart';
@@ -147,5 +148,36 @@ void main() {
         ExpenseDraftErrorCode.notConfigured,
       );
     });
+
+    test(
+      'yanıt vermeyen istemci zaman aşımına uğrayınca kontrollü hata döner',
+      () async {
+        final hangingClient = _HangingGeminiClient();
+        final service = ExpenseDraftService(
+          hangingClient,
+          requestTimeout: const Duration(milliseconds: 20),
+        );
+
+        final result = await service.extractDraft(
+          rawText: 'Kahve 90 TL',
+          today: today,
+          categoriesByType: categories,
+          source: TxSource.chat,
+        );
+
+        expect(result, isA<ExpenseDraftFailure>());
+        final error = (result as ExpenseDraftFailure).error;
+        expect(error.code, ExpenseDraftErrorCode.networkOrService);
+        expect(error.userMessage, contains('zaman aşımı'));
+      },
+    );
   });
+}
+
+class _HangingGeminiClient implements GeminiClient {
+  @override
+  Future<String> generateDraftJson({
+    required String systemInstruction,
+    required String userPrompt,
+  }) => Completer<String>().future;
 }

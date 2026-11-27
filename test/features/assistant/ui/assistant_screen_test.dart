@@ -248,6 +248,17 @@ void main() {
 
         expect(t.takeException(), isNull);
         expect(find.text('Migros 320 TL'), findsOneWidget);
+
+        // Onay kartı açıkken de 5 ekran durumunda (özellikle 800x360 yatay ve 320x568 küçük)
+        // taşma olmamalı ve giriş alanı ekranda kalmalıdır.
+        await t.enterText(find.byType(TextField), 'Taksi 150 TL');
+        await t.pump();
+        await t.tap(find.byTooltip('Gönder'));
+        await t.pumpAndSettle();
+
+        expect(t.takeException(), isNull);
+        expect(find.text('Kaydet'), findsOneWidget);
+        expect(find.byType(TextField), findsOneWidget);
       });
     }
   });

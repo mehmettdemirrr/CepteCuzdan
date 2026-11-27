@@ -275,6 +275,57 @@ void main() {
       expect(items.single.price, 24550);
     });
 
+    test(
+      'eski taslak için açılan Düzenle yeni taslak gelince yeni taslağı ezmez',
+      () async {
+        await setupWithJson('''
+      {
+        "type": "expense",
+        "amount": 100.0,
+        "merchant": "İlk",
+        "date": "2026-11-26",
+        "category": "Market",
+        "items": []
+      }
+      ''');
+
+        await controller.sendText('İlk 100 TL');
+        final firstDraftId = controller.pendingDraft!.draftId;
+
+        gemini.response = '''
+      {
+        "type": "expense",
+        "amount": 250.0,
+        "merchant": "Yeni",
+        "date": "2026-11-26",
+        "category": "Ulaşım",
+        "items": []
+      }
+      ''';
+        await controller.sendText('Yeni 250 TL');
+        expect(controller.pendingDraft!.draft.merchant, 'Yeni');
+
+        // Eski taslağa ait düzenleme sonucu geç gelirse yeni taslağı ezmemeli.
+        controller.updatePendingDraft(
+          ParsedExpenseDraft(
+            type: TxType.expense,
+            amountTl: 999.0,
+            merchant: 'Eski Düzenleme',
+            date: DateTime(2026, 11, 26),
+            categoryName: 'Market',
+            source: TxSource.chat,
+            items: const [],
+            usedDefaultDate: false,
+            usedFallbackCategory: false,
+          ),
+          expectedDraftId: firstDraftId,
+        );
+
+        expect(controller.pendingDraft!.draft.amountTl, 250.0);
+        expect(controller.pendingDraft!.draft.merchant, 'Yeni');
+      },
+    );
+
     test('çift tıklama koruması aynı taslağı iki kez kaydetmez', () async {
       await setupWithJson('''
       {

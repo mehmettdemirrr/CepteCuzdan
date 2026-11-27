@@ -373,9 +373,14 @@ class AssistantController extends ChangeNotifier {
   }
 
   /// Düzenle alt sayfasından gelen güncel taslağı bellekte günceller.
-  void updatePendingDraft(ParsedExpenseDraft updated) {
+  /// [expectedDraftId] verilmişse ve o sırada yeni bir taslak geldiyse eski düzenleme yoksayılır.
+  void updatePendingDraft(
+    ParsedExpenseDraft updated, {
+    String? expectedDraftId,
+  }) {
     final current = _pendingDraft;
     if (current == null || current.isSaved) return;
+    if (expectedDraftId != null && current.draftId != expectedDraftId) return;
     _pendingDraft = current.copyWith(draft: updated);
     _saveErrorMessage = null;
     _safeNotify();

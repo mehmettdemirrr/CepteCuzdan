@@ -103,13 +103,14 @@ class _AssistantScreenState extends State<AssistantScreen> {
           .toList(),
     };
 
+    final editedDraftId = pending.draftId;
     final updated = await showDraftEditSheet(
       context,
       initial: pending.draft,
       categoriesByType: categoriesByType,
     );
     if (updated == null || !mounted) return;
-    controller.updatePendingDraft(updated);
+    controller.updatePendingDraft(updated, expectedDraftId: editedDraftId);
   }
 
   Future<void> _handleSavePendingDraft() async {
@@ -144,30 +145,58 @@ class _AssistantScreenState extends State<AssistantScreen> {
               children: [
                 if (controller.isBusy) const LinearProgressIndicator(),
                 Expanded(
-                  child: controller.isLoadingHistory && messages.isEmpty
-                      ? const Center(child: CircularProgressIndicator())
-                      : messages.isEmpty
-                      ? const _EmptyAssistantView()
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final messageArea =
+                          controller.isLoadingHistory && messages.isEmpty
+                          ? const Center(child: CircularProgressIndicator())
+                          : messages.isEmpty
+                          ? const _EmptyAssistantView()
+                          : ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) =>
+                                  _MessageBubble(message: messages[index]),
+                            );
+
+                      final pending = controller.pendingDraft;
+                      if (pending == null) return messageArea;
+
+                      final avail = constraints.maxHeight;
+                      // Yatay/küçük ekranda onay kartı kullanılabilir alanın
+                      // üst sınırını aşmaz; mesaj alanı kalan yüksekliği alır.
+                      final cardMaxHeight = avail < 140
+                          ? avail
+                          : (avail * (avail < 280 ? 0.72 : 0.62)).clamp(
+                              0.0,
+                              360.0,
+                            );
+
+                      return Column(
+                        children: [
+                          if (avail >= 140) Expanded(child: messageArea),
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: cardMaxHeight,
+                            ),
+                            child: ConfirmationCard(
+                              pending: pending,
+                              isSaving: controller.isSavingDraft,
+                              saveErrorMessage: controller.saveErrorMessage,
+                              onSave: _handleSavePendingDraft,
+                              onEdit: _handleEditPendingDraft,
+                              onCancel: controller.clearPendingDraft,
+                            ),
                           ),
-                          itemCount: messages.length,
-                          itemBuilder: (context, index) =>
-                              _MessageBubble(message: messages[index]),
-                        ),
-                ),
-                if (controller.pendingDraft != null)
-                  ConfirmationCard(
-                    pending: controller.pendingDraft!,
-                    isSaving: controller.isSavingDraft,
-                    saveErrorMessage: controller.saveErrorMessage,
-                    onSave: _handleSavePendingDraft,
-                    onEdit: _handleEditPendingDraft,
-                    onCancel: controller.clearPendingDraft,
+                        ],
+                      );
+                    },
                   ),
+                ),
                 if (controller.isListening)
                   _VoiceListeningBanner(
                     partialText: controller.partialSpeechText,

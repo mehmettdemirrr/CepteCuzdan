@@ -13,9 +13,13 @@ import 'parsed_expense_draft.dart';
 /// Ham metinden (fiş OCR, ses veya sohbet) gelir/gider taslağı çıkaran servis.
 /// UI'dan bağımsızdır; veritabanına yazmaz ve kuruş dönüşümü yapmaz.
 class ExpenseDraftService {
-  const ExpenseDraftService(this._client);
+  const ExpenseDraftService(
+    this._client, {
+    this.requestTimeout = geminiRequestTimeout,
+  });
 
   final GeminiClient _client;
+  final Duration requestTimeout;
 
   /// [rawText] içinden doğrulanmış [ParsedExpenseDraft] çıkarır.
   /// [categoriesByType], `CategoryProvider.ofType` ile elde edilen tür bazlı
@@ -45,10 +49,12 @@ class ExpenseDraftService {
 
     final String rawResponse;
     try {
-      rawResponse = await _client.generateDraftJson(
-        systemInstruction: prompt.systemInstruction,
-        userPrompt: prompt.userPrompt,
-      );
+      rawResponse = await _client
+          .generateDraftJson(
+            systemInstruction: prompt.systemInstruction,
+            userPrompt: prompt.userPrompt,
+          )
+          .timeout(requestTimeout);
     } on QuotaExceeded {
       debugPrint('ExpenseDraftService: Gemini kotası aşıldı.');
       return const ExpenseDraftFailure(

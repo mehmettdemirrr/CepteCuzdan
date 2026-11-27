@@ -6,6 +6,9 @@ import 'package:firebase_core/firebase_core.dart';
 /// Kaynak: firebase.google.com/docs/ai-logic/models (Kasım 2026).
 const String geminiModelName = 'gemini-3.5-flash-lite';
 
+/// Gemini API çağrıları için üst zaman aşımı süresi.
+const Duration geminiRequestTimeout = Duration(seconds: 20);
+
 /// Firebase başlatılmadan AI çağrısı yapıldığında fırlatılır.
 class FirebaseNotInitializedException implements Exception {
   const FirebaseNotInitializedException();
@@ -92,7 +95,9 @@ class FirebaseGeminiClient implements GeminiClient {
       ),
     );
 
-    final response = await model.generateContent([Content.text(userPrompt)]);
+    final response = await model
+        .generateContent([Content.text(userPrompt)])
+        .timeout(geminiRequestTimeout);
     return response.text ?? '';
   }
 }

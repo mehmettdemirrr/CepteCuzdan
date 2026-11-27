@@ -17,10 +17,19 @@ class BudgetQueryService {
   final TransactionRepository transactions;
   final CategoryRepository categories;
 
-  static const _questionCues = [
+  static const _explicitQuestionCues = [
     'ne kadar',
     'kac lira',
     'kac tl',
+    'nasil',
+    'nedir',
+    'ne durumda',
+    'ne harcadim',
+    'neler harcadim',
+  ];
+
+  static const _questionCues = [
+    ..._explicitQuestionCues,
     'toplam',
     'ozet',
     'bakiye',
@@ -28,8 +37,6 @@ class BudgetQueryService {
     'butcem',
     'butce',
     'kaldi',
-    'ne harcadim',
-    'neler harcadim',
   ];
 
   static const _summaryCues = ['ozet', 'bakiye', 'durum', 'butce', 'kaldi'];
@@ -54,14 +61,12 @@ class BudgetQueryService {
         trimmed.contains('?') || _questionCues.any(folded.contains);
     if (!hasQuestionCue) return false;
 
-    // Soru işareti yokken metinde somut tutar + kayıt fiili varsa (örn. "150 tl verdim")
-    // bu bir harcama kaydıdır, soru değil.
+    // Soru işareti ve açık soru kalıbı yokken metinde somut tutar/rakam varsa
+    // (örn. "Markete toplam 450 TL harcadım") bu bir işlem kaydıdır, soru değil.
     final hasDigit = RegExp(r'\d').hasMatch(trimmed);
-    if (!trimmed.contains('?') &&
-        hasDigit &&
-        (folded.contains('verdim') ||
-            folded.contains('aldim') ||
-            folded.contains('odedim'))) {
+    final hasExplicitQuestion =
+        trimmed.contains('?') || _explicitQuestionCues.any(folded.contains);
+    if (hasDigit && !hasExplicitQuestion) {
       return false;
     }
 

@@ -114,7 +114,15 @@ void main() {
         isFalse,
       );
       expect(
-        BudgetQueryService.isBudgetQuestion('Maaş 25000 TL geldi'),
+        BudgetQueryService.isBudgetQuestion('Markete toplam 450 TL harcadım'),
+        isFalse,
+      );
+      expect(
+        BudgetQueryService.isBudgetQuestion('Bugün toplam 120,50 lira ödedim'),
+        isFalse,
+      );
+      expect(
+        BudgetQueryService.isBudgetQuestion('Maaş toplam 25000 TL geldi'),
         isFalse,
       );
     });
