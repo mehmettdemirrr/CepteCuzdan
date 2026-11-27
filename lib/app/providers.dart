@@ -145,6 +145,7 @@ Widget buildProviders({required AppDeps deps, required Widget child}) {
               transactions: deps.txs,
               categories: deps.categories,
             ),
+            dataResets: c.read<DataResetter>().resets,
           )..loadHistory();
         },
       ),
