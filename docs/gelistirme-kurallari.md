@@ -56,6 +56,7 @@ await expectLater(t, meetsGuideline(textContrastGuideline));
 
 - **Ekranlar veritabanına ya da repository'ye doğrudan yazmaz.** İşlem yazmanın tek yolu `TransactionProvider.add / update / delete`. Repository'ye doğrudan yazılırsa Ana Sayfa yenilenmez ve bütçe bildirimi gelmez.
 - Veri dışarıdan değiştiyse (bütçe kaydı, sıfırlama, kategori silme) `TransactionProvider.markChanged()` çağrılır. Veri gösteren ekranlar `revision` değişince yeniden yükler.
+- **Veri sıfırlamayı** anlamak için `revision` değil `DataResetter.resets` dinlenir; `revision` her kayıtta değişir.
 - Gemini, ML Kit, ses tanıma ve bildirim servisleri **bir arabirimin arkasında** durur. Testlerde sahteleri kullanılır; testlerde gerçek API çağrılmaz.
 - Sahte repository'yi (`test/fakes/fake_repositories.dart`) değiştirirsen sözleşme testi (`repository_contract.dart`) hem sahte hem SQLite için geçmeye devam etmeli.
 - `package:flutter/foundation.dart`'ı tamamen içe aktaran dosyada modeldeki `Category` ile ad çakışması olur. `show ChangeNotifier, debugPrint` gibi seçerek içe aktar.
