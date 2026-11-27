@@ -41,6 +41,9 @@ class _NoopStorage implements ReceiptImageStorage {
   Future<void> deleteReceipt(String path) async {}
   @override
   Future<void> deleteAllReceipts() async {}
+
+  @override
+  Future<void> deleteOrphanReceipts(Set<String> activePaths) async {}
 }
 
 void main() {

@@ -43,6 +43,9 @@ class _StubStorage implements ReceiptImageStorage {
   Future<void> deleteReceipt(String path) async {}
   @override
   Future<void> deleteAllReceipts() async {}
+
+  @override
+  Future<void> deleteOrphanReceipts(Set<String> activePaths) async {}
 }
 
 class _FakeSpeechService implements SpeechService {

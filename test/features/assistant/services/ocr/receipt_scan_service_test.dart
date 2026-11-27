@@ -53,6 +53,9 @@ class _FakeStorage implements ReceiptImageStorage {
 
   @override
   Future<void> deleteAllReceipts() async {}
+
+  @override
+  Future<void> deleteOrphanReceipts(Set<String> activePaths) async {}
 }
 
 class _FakeGeminiClient implements GeminiClient {

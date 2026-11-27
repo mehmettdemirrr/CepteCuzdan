@@ -187,6 +187,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                               pending: pending,
                               isSaving: controller.isSavingDraft,
                               saveErrorMessage: controller.saveErrorMessage,
+                              currencyStyle: controller.currencyStyle,
                               onSave: _handleSavePendingDraft,
                               onEdit: _handleEditPendingDraft,
                               onCancel: controller.clearPendingDraft,
@@ -359,53 +360,60 @@ class _ErrorBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    final maxBannerHeight = MediaQuery.sizeOf(context).height < 480
+        ? 112.0
+        : 180.0;
+
     return Material(
       color: scheme.errorContainer,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.error_outline, color: scheme.onErrorContainer),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    message,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: scheme.onErrorContainer,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxBannerHeight),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.error_outline, color: scheme.onErrorContainer),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: scheme.onErrorContainer,
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Hata mesajını kapat',
-                  constraints: const BoxConstraints(
-                    minWidth: 48,
-                    minHeight: 48,
+                  IconButton(
+                    tooltip: 'Hata mesajını kapat',
+                    constraints: const BoxConstraints(
+                      minWidth: 48,
+                      minHeight: 48,
+                    ),
+                    onPressed: onDismiss,
+                    icon: Icon(Icons.close, color: scheme.onErrorContainer),
                   ),
-                  onPressed: onDismiss,
-                  icon: Icon(Icons.close, color: scheme.onErrorContainer),
-                ),
-              ],
-            ),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                if (canRetry)
+                ],
+              ),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  if (canRetry)
+                    TextButton(
+                      onPressed: onRetry,
+                      child: const Text('Tekrar dene'),
+                    ),
                   TextButton(
-                    onPressed: onRetry,
-                    child: const Text('Tekrar dene'),
+                    onPressed: onManualAdd,
+                    child: const Text('Manuel ekle'),
                   ),
-                TextButton(
-                  onPressed: onManualAdd,
-                  child: const Text('Manuel ekle'),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -514,6 +522,13 @@ class _InputBar extends StatelessWidget {
                   enabled: !isBusy && !isListening,
                   minLines: 1,
                   maxLines: 3,
+                  maxLength: 1000,
+                  buildCounter: (
+                    _, {
+                    required currentLength,
+                    required isFocused,
+                    required maxLength,
+                  }) => null,
                   textInputAction: TextInputAction.send,
                   onSubmitted: (_) => onSend(),
                   decoration: const InputDecoration(

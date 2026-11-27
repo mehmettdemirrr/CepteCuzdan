@@ -17,11 +17,13 @@ class ConfirmationCard extends StatelessWidget {
     required this.onEdit,
     required this.onCancel,
     this.saveErrorMessage,
+    this.currencyStyle = CurrencyStyle.symbol,
   });
 
   final PendingDraft pending;
   final bool isSaving;
   final String? saveErrorMessage;
+  final CurrencyStyle currencyStyle;
   final VoidCallback onSave;
   final VoidCallback onEdit;
   final VoidCallback onCancel;
@@ -31,7 +33,10 @@ class ConfirmationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final draft = pending.draft;
-    final amountText = formatKurus(tlToKurus(draft.amountTl));
+    final amountText = formatKurus(
+      tlToKurus(draft.amountTl),
+      style: currencyStyle,
+    );
     final typeLabel = draft.type == TxType.income ? 'Gelir' : 'Gider';
     final sourceLabel = switch (draft.source) {
       TxSource.receipt => 'Fiş',
@@ -159,7 +164,10 @@ class ConfirmationCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        formatKurus(tlToKurus(item.priceTl)),
+                        formatKurus(
+                          tlToKurus(item.priceTl),
+                          style: currencyStyle,
+                        ),
                         style: theme.textTheme.bodySmall,
                       ),
                     ],

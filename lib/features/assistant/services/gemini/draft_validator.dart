@@ -174,8 +174,17 @@ double? parsePositiveTlAmount(Object? raw) {
   return value;
 }
 
+final _currencyEdgePattern = RegExp(
+  r'^(?:₺|tl|try)\s*|\s*(?:₺|tl|try)$',
+  caseSensitive: false,
+);
+
 double? _parseTlString(String raw) {
-  final s = raw.trim();
+  var s = raw.trim();
+  // Başta/sonda para simgesi varsa ("₺150,00", "150,00 TL", "TRY 1.234,50") temizle.
+  while (_currencyEdgePattern.hasMatch(s)) {
+    s = s.replaceAll(_currencyEdgePattern, '').trim();
+  }
   if (s.isEmpty) return null;
 
   final commaCount = ','.allMatches(s).length;

@@ -64,6 +64,9 @@ class _FakeStorage implements ReceiptImageStorage {
 
   @override
   Future<void> deleteAllReceipts() async => deleteAllCount++;
+
+  @override
+  Future<void> deleteOrphanReceipts(Set<String> activePaths) async {}
 }
 
 const _validJson = '''

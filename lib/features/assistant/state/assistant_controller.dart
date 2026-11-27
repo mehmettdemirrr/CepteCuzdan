@@ -59,12 +59,16 @@ class AssistantController extends ChangeNotifier {
     this.speechService,
     this.budgetQueryService,
     this.dataResets,
+    CurrencyStyle Function()? currencyStyleProvider,
     DateTime Function()? now,
-  }) : _now = now ?? DateTime.now {
+  }) : _currencyStyleProvider = currencyStyleProvider ?? _defaultCurrencyStyle,
+       _now = now ?? DateTime.now {
     _lastKnownRevision = transactions.revision;
     transactions.addListener(_onTransactionsChanged);
     dataResets?.addListener(_onDataReset);
   }
+
+  static CurrencyStyle _defaultCurrencyStyle() => CurrencyStyle.symbol;
 
   final ChatMessageRepository chats;
   final TransactionProvider transactions;
@@ -74,7 +78,10 @@ class AssistantController extends ChangeNotifier {
   final SpeechService? speechService;
   final BudgetQueryService? budgetQueryService;
   final ValueListenable<int>? dataResets;
+  final CurrencyStyle Function() _currencyStyleProvider;
   final DateTime Function() _now;
+
+  CurrencyStyle get currencyStyle => _currencyStyleProvider();
 
   List<ChatMessage> _messages = const [];
   bool _isLoadingHistory = false;
@@ -146,12 +153,32 @@ class AssistantController extends ChangeNotifier {
     }
   }
 
+  Future<void> _cleanupOrphanReceipts() async {
+    try {
+      final allTxs = await transactions.query();
+      final activePaths = <String>{
+        for (final tx in allTxs)
+          if (tx.receiptPath != null && tx.receiptPath!.isNotEmpty)
+            tx.receiptPath!,
+        if (_pendingDraft?.receiptPath != null) _pendingDraft!.receiptPath!,
+      };
+      await receiptPipeline.scanService.storage.deleteOrphanReceipts(
+        activePaths,
+      );
+    } catch (e) {
+      debugPrint(
+        'AssistantController: Yetim fiş temizliği başarısız (${e.runtimeType})',
+      );
+    }
+  }
+
   Future<void> _reloadAfterExternalChange() async {
     try {
       final loaded = await chats.all();
       if (_disposed) return;
       _messages = loaded;
       _safeNotify();
+      await _cleanupOrphanReceipts();
     } catch (e) {
       debugPrint('AssistantController: Geçmiş yenilenemedi (${e.runtimeType})');
     }
@@ -163,6 +190,7 @@ class AssistantController extends ChangeNotifier {
     _safeNotify();
     try {
       _messages = await chats.all();
+      await _cleanupOrphanReceipts();
     } catch (e) {
       debugPrint('AssistantController: Geçmiş yüklenemedi (${e.runtimeType})');
       _errorMessage = 'Sohbet geçmişi yüklenemedi.';
@@ -206,6 +234,7 @@ class AssistantController extends ChangeNotifier {
       final localAnswer = await budgetQueryService?.tryAnswer(
         trimmed,
         now: _now(),
+        currencyStyle: currencyStyle,
       );
       if (localAnswer != null) {
         await chats.add(
@@ -499,7 +528,10 @@ class AssistantController extends ChangeNotifier {
 
   String _formatDraftSummary(ParsedExpenseDraft draft) {
     final typeLabel = draft.type == TxType.income ? 'Gelir' : 'Gider';
-    final amountText = formatKurus(tlToKurus(draft.amountTl));
+    final amountText = formatKurus(
+      tlToKurus(draft.amountTl),
+      style: currencyStyle,
+    );
     final merchantPart =
         draft.merchant != null && draft.merchant!.trim().isNotEmpty
         ? ' · ${draft.merchant}'

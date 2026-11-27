@@ -51,6 +51,9 @@ class _StubStorage implements ReceiptImageStorage {
 
   @override
   Future<void> deleteAllReceipts() async {}
+
+  @override
+  Future<void> deleteOrphanReceipts(Set<String> activePaths) async {}
 }
 
 const _okJson = '''

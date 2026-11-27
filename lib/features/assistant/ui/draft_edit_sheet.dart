@@ -118,11 +118,19 @@ class _DraftEditSheetState extends State<_DraftEditSheet> {
   }
 
   Future<void> _pickDate() async {
+    final minDate = DateTime(2020);
+    final maxDate = DateTime(2100);
+    final clampedInitial = _date.isBefore(minDate)
+        ? minDate
+        : _date.isAfter(maxDate)
+        ? maxDate
+        : _date;
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
+      initialDate: clampedInitial,
+      firstDate: minDate,
+      lastDate: maxDate,
+      locale: const Locale('tr', 'TR'),
     );
     if (picked == null || !mounted) return;
     setState(() => _date = DateTime(picked.year, picked.month, picked.day));
@@ -289,6 +297,7 @@ class _DraftEditSheetState extends State<_DraftEditSheet> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           flex: 3,
@@ -299,6 +308,15 @@ class _DraftEditSheetState extends State<_DraftEditSheet> {
                               isDense: true,
                               border: OutlineInputBorder(),
                             ),
+                            validator: (value) {
+                              final name = (value ?? '').trim();
+                              final priceText = _itemRows[i].priceCtrl.text
+                                  .trim();
+                              if (name.isEmpty && priceText.isNotEmpty) {
+                                return 'Ürün adı girin';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(width: 6),
@@ -314,6 +332,18 @@ class _DraftEditSheetState extends State<_DraftEditSheet> {
                               isDense: true,
                               border: OutlineInputBorder(),
                             ),
+                            validator: (value) {
+                              final name = _itemRows[i].nameCtrl.text.trim();
+                              final priceText = (value ?? '').trim();
+                              if (name.isEmpty && priceText.isEmpty) {
+                                return null;
+                              }
+                              final kurus = parseTlToKurus(priceText);
+                              if (kurus == null || kurus <= 0) {
+                                return 'Geçerli tutar';
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         IconButton(

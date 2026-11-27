@@ -75,7 +75,11 @@ class BudgetQueryService {
 
   /// Metin bir bütçe/harcama sorusuysa yerel SQLite özetinden Türkçe yanıt döner;
   /// soru değilse `null` döner (akış normal taslak çıkarmaya devam eder).
-  Future<String?> tryAnswer(String rawText, {required DateTime now}) async {
+  Future<String?> tryAnswer(
+    String rawText, {
+    required DateTime now,
+    CurrencyStyle currencyStyle = CurrencyStyle.symbol,
+  }) async {
     if (!isBudgetQuestion(rawText)) return null;
 
     final folded = _normalize(rawText);
@@ -93,13 +97,15 @@ class BudgetQueryService {
     final isSummaryQuery =
         matchedCategory == null && _summaryCues.any(folded.contains);
 
+    String fmt(int kurus) => formatKurus(kurus, style: currencyStyle);
+
     if (isSummaryQuery) {
       if (summary.incomeTotal == 0 && summary.expenseTotal == 0) {
         return '${period.label} henüz kayıtlı bir gelir veya gideriniz bulunmuyor.';
       }
-      return '${period.label} toplam geliriniz ${formatKurus(summary.incomeTotal)}, '
-          'gideriniz ${formatKurus(summary.expenseTotal)}. '
-          'Net bakiyeniz ${formatKurus(summary.balance)}.';
+      return '${period.label} toplam geliriniz ${fmt(summary.incomeTotal)}, '
+          'gideriniz ${fmt(summary.expenseTotal)}. '
+          'Net bakiyeniz ${fmt(summary.balance)}.';
     }
 
     if (matchedCategory != null) {
@@ -113,20 +119,20 @@ class BudgetQueryService {
         return '${period.label} ${matchedCategory.name} kategorisinde kayıtlı $kind bulunmuyor.';
       }
       final verb = isIncomeCat ? 'gelir elde ettiniz' : 'harcadınız';
-      return '${period.label} ${matchedCategory.name} kategorisinde toplam ${formatKurus(totalKurus)} $verb.';
+      return '${period.label} ${matchedCategory.name} kategorisinde toplam ${fmt(totalKurus)} $verb.';
     }
 
     if (isIncomeQuery) {
       if (summary.incomeTotal == 0) {
         return '${period.label} kayıtlı bir geliriniz bulunmuyor.';
       }
-      return '${period.label} toplam geliriniz ${formatKurus(summary.incomeTotal)}.';
+      return '${period.label} toplam geliriniz ${fmt(summary.incomeTotal)}.';
     }
 
     if (summary.expenseTotal == 0) {
       return '${period.label} kayıtlı bir harcamanız bulunmuyor.';
     }
-    return '${period.label} toplam ${formatKurus(summary.expenseTotal)} harcadınız.';
+    return '${period.label} toplam ${fmt(summary.expenseTotal)} harcadınız.';
   }
 
   _ParsedPeriod _parsePeriod(String folded, DateTime now) {

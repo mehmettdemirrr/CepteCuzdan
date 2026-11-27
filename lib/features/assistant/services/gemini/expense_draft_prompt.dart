@@ -1,6 +1,22 @@
 import '../../../../core/format/dates.dart';
 import '../../../../core/models/enums.dart';
 
+/// Gemini istemine gönderilecek ham metin için üst karakter sınırı.
+/// Aşırı uzun yapıştırma veya gürültülü OCR çıktılarında kota tüketimini sınırlar.
+const int maxExpenseDraftInputLength = 4000;
+
+final _userInputTagPattern = RegExp(
+  r'<\s*/?\s*user_input\s*>',
+  caseSensitive: false,
+);
+
+/// Kullanıcı/fiş metnindeki sınır etiketi kaçışlarını temizler ve uzunluğu sınırlar.
+String sanitizeDraftUserInput(String rawText) {
+  final stripped = rawText.replaceAll(_userInputTagPattern, '').trim();
+  if (stripped.length <= maxExpenseDraftInputLength) return stripped;
+  return stripped.substring(0, maxExpenseDraftInputLength);
+}
+
 /// Gemini'ye gönderilecek sistem talimatını ve kullanıcı istemini oluşturur.
 /// Fiş veya sohbet metnindeki olası prompt injection talimatlarını yok sayacak
 /// şekilde kullanıcı girdisini `<user_input>` blokları içine sarar.
@@ -19,6 +35,7 @@ class ExpenseDraftPrompt {
     required Map<TxType, List<String>> categoriesByType,
     required TxSource source,
   }) {
+    final safeText = sanitizeDraftUserInput(rawText);
     final expenseCategories = categoriesByType[TxType.expense] ?? const [];
     final incomeCategories = categoriesByType[TxType.income] ?? const [];
     final todayStr = toDbDate(today);
@@ -51,7 +68,7 @@ Gider kategorileri (type="expense"): ${expenseCategories.join(', ')}
 Gelir kategorileri (type="income"): ${incomeCategories.join(', ')}
 
 <user_input>
-$rawText
+$safeText
 </user_input>
 ''';
 

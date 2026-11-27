@@ -125,6 +125,9 @@ abstract interface class ReceiptImageStorage {
   Future<String> copyToPermanentStorage(String sourcePath);
   Future<void> deleteReceipt(String path);
   Future<void> deleteAllReceipts();
+
+  /// [activePaths] kümesinde yer almayan sahipsiz fiş dosyalarını siler.
+  Future<void> deleteOrphanReceipts(Set<String> activePaths);
 }
 
 /// Fiş görsellerini `<appDocs>/receipts/` altında saklayan yerel depo.
@@ -133,6 +136,8 @@ class LocalReceiptImageStorage implements ReceiptImageStorage {
     Future<Directory> Function()? documentsDirectoryProvider,
   }) : _documentsDirectoryProvider =
            documentsDirectoryProvider ?? getApplicationDocumentsDirectory;
+
+  static const _allowedExtensions = {'.jpg', '.jpeg', '.png', '.webp'};
 
   final Future<Directory> Function() _documentsDirectoryProvider;
   int _counter = 0;
@@ -154,9 +159,8 @@ class LocalReceiptImageStorage implements ReceiptImageStorage {
     }
 
     final dir = await _receiptsDir();
-    final ext = p.extension(sourcePath).isEmpty
-        ? '.jpg'
-        : p.extension(sourcePath);
+    final rawExt = p.extension(sourcePath).toLowerCase();
+    final ext = _allowedExtensions.contains(rawExt) ? rawExt : '.jpg';
     final stamp = DateTime.now().microsecondsSinceEpoch;
     final seq = ++_counter;
     final targetPath = p.join(dir.path, 'receipt_${stamp}_$seq$ext');
@@ -178,6 +182,27 @@ class LocalReceiptImageStorage implements ReceiptImageStorage {
     final dir = Directory(p.join(docs.path, 'receipts'));
     if (await dir.exists()) {
       await dir.delete(recursive: true);
+    }
+  }
+
+  @override
+  Future<void> deleteOrphanReceipts(Set<String> activePaths) async {
+    final docs = await _documentsDirectoryProvider();
+    final dir = Directory(p.join(docs.path, 'receipts'));
+    if (!await dir.exists()) return;
+
+    final normalizedActive = activePaths.map(p.normalize).toSet();
+    await for (final entity in dir.list()) {
+      if (entity is! File) continue;
+      if (!normalizedActive.contains(p.normalize(entity.path))) {
+        try {
+          await entity.delete();
+        } catch (e) {
+          debugPrint(
+            'LocalReceiptImageStorage: Yetim fiş silinemedi (${e.runtimeType})',
+          );
+        }
+      }
     }
   }
 }
