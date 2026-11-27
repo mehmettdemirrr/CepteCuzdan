@@ -8,6 +8,7 @@ import 'package:cepte_cuzdan/features/assistant/services/ocr/ocr_service.dart';
 import 'package:cepte_cuzdan/features/assistant/state/assistant_controller.dart';
 import 'package:cepte_cuzdan/features/transactions/category_provider.dart';
 import 'package:cepte_cuzdan/features/transactions/transaction_provider.dart';
+import 'package:flutter/foundation.dart' show ValueNotifier;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../fakes/fake_repositories.dart';
@@ -84,6 +85,7 @@ void main() {
   late _FakePicker picker;
   late _FakeOcr ocr;
   late _FakeStorage storage;
+  late ValueNotifier<int> dataResets;
   late AssistantController controller;
 
   setUp(() async {
@@ -95,6 +97,7 @@ void main() {
     picker = _FakePicker(path: '/tmp/fis.jpg');
     ocr = _FakeOcr(text: 'MİGROS\nTOPLAM 150,00');
     storage = _FakeStorage();
+    dataResets = ValueNotifier<int>(0);
 
     final draftService = ExpenseDraftService(gemini);
     controller = AssistantController(
@@ -110,12 +113,14 @@ void main() {
         ),
         draftService: draftService,
       ),
+      dataResets: dataResets,
       now: () => DateTime(2026, 11, 26, 12, 0),
     );
   });
 
   tearDown(() {
     controller.dispose();
+    dataResets.dispose();
     txProvider.dispose();
     catProvider.dispose();
   });
@@ -224,20 +229,23 @@ void main() {
     },
   );
 
-  test(
-    'Verileri sıfırla sonrası revision değişince geçmiş ve fişler temizlenir',
-    () async {
-      await controller.scanReceipt(ReceiptImageSource.camera);
-      expect(controller.messages, isNotEmpty);
-      expect(controller.pendingDraft, isNotNull);
+  test('DataResetter.resets sinyali gelince geçmiş, bekleyen taslak ve fiş dosyaları temizlenir', () async {
+    await controller.scanReceipt(ReceiptImageSource.camera);
+    expect(controller.messages, isNotEmpty);
+    expect(controller.pendingDraft, isNotNull);
 
-      await repos.reset();
-      txProvider.markChanged();
-      await Future<void>.delayed(Duration.zero);
+    // Normal işlem değişikliği fiş dosyalarını silmez.
+    txProvider.markChanged();
+    await Future<void>.delayed(Duration.zero);
+    expect(storage.deleteAllCount, 0);
 
-      expect(controller.messages, isEmpty);
-      expect(controller.pendingDraft, isNull);
-      expect(storage.deleteAllCount, 1);
-    },
-  );
+    // Veri sıfırlama sinyali her şeyi temizler.
+    await repos.reset();
+    dataResets.value++;
+    await Future<void>.delayed(Duration.zero);
+
+    expect(controller.messages, isEmpty);
+    expect(controller.pendingDraft, isNull);
+    expect(storage.deleteAllCount, 1);
+  });
 }

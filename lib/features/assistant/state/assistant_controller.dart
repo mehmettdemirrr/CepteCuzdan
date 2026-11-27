@@ -1,4 +1,5 @@
-import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
+import 'package:flutter/foundation.dart'
+    show ChangeNotifier, ValueListenable, debugPrint;
 
 import '../../../core/format/money.dart';
 import '../../../core/format/text.dart';
@@ -57,10 +58,12 @@ class AssistantController extends ChangeNotifier {
     required this.receiptPipeline,
     this.speechService,
     this.budgetQueryService,
+    this.dataResets,
     DateTime Function()? now,
   }) : _now = now ?? DateTime.now {
     _lastKnownRevision = transactions.revision;
     transactions.addListener(_onTransactionsChanged);
+    dataResets?.addListener(_onDataReset);
   }
 
   final ChatMessageRepository chats;
@@ -70,6 +73,7 @@ class AssistantController extends ChangeNotifier {
   final ReceiptDraftPipeline receiptPipeline;
   final SpeechService? speechService;
   final BudgetQueryService? budgetQueryService;
+  final ValueListenable<int>? dataResets;
   final DateTime Function() _now;
 
   List<ChatMessage> _messages = const [];
@@ -113,24 +117,40 @@ class AssistantController extends ChangeNotifier {
     _reloadAfterExternalChange();
   }
 
+  void _onDataReset() {
+    _handleDataReset();
+  }
+
+  Future<void> _handleDataReset() async {
+    _pendingDraft = null;
+    _errorMessage = null;
+    _saveErrorMessage = null;
+    _messages = const [];
+    _safeNotify();
+    try {
+      await receiptPipeline.scanService.storage.deleteAllReceipts();
+    } catch (e) {
+      debugPrint(
+        'AssistantController: Fiş dosyaları temizlenemedi (${e.runtimeType})',
+      );
+    }
+    try {
+      final loaded = await chats.all();
+      if (_disposed) return;
+      _messages = loaded;
+      _safeNotify();
+    } catch (e) {
+      debugPrint(
+        'AssistantController: Sıfırlama sonrası geçmiş okunamadı (${e.runtimeType})',
+      );
+    }
+  }
+
   Future<void> _reloadAfterExternalChange() async {
     try {
       final loaded = await chats.all();
       if (_disposed) return;
       _messages = loaded;
-      // "Verileri sıfırla" sohbet geçmişini temizler; bekleyen taslak ve
-      // cihazdaki fiş dosyaları da buna paralel temizlenir.
-      if (loaded.isEmpty) {
-        _pendingDraft = null;
-        _errorMessage = null;
-        try {
-          await receiptPipeline.scanService.storage.deleteAllReceipts();
-        } catch (e) {
-          debugPrint(
-            'AssistantController: Fiş dosyaları temizlenemedi (${e.runtimeType})',
-          );
-        }
-      }
       _safeNotify();
     } catch (e) {
       debugPrint('AssistantController: Geçmiş yenilenemedi (${e.runtimeType})');
@@ -530,6 +550,7 @@ class AssistantController extends ChangeNotifier {
     if (_isListening) {
       speechService?.cancelListening();
     }
+    dataResets?.removeListener(_onDataReset);
     transactions.removeListener(_onTransactionsChanged);
     super.dispose();
   }
