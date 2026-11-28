@@ -128,7 +128,13 @@ class AssistantController extends ChangeNotifier {
     _handleDataReset();
   }
 
+  /// Her veri sıfırlamada artar. Sıfırlamadan önce başlamış bir isteğin
+  /// sonucu geldiğinde sayaç değişmişse sonuç bırakılır (taslak, mesaj ve
+  /// hata yazılmaz; taranmış fiş görseli silinir).
+  int _resetEpoch = 0;
+
   Future<void> _handleDataReset() async {
+    _resetEpoch++;
     _pendingDraft = null;
     _errorMessage = null;
     _saveErrorMessage = null;
@@ -154,8 +160,12 @@ class AssistantController extends ChangeNotifier {
   }
 
   Future<void> _cleanupOrphanReceipts() async {
+    // Bir istek sürerken (ör. fiş taranıyor) görsel kopyalanmış ama henüz
+    // taslağa bağlanmamış olabilir; o sırada temizlik yapılmaz.
+    if (_isBusy) return;
     try {
       final allTxs = await transactions.query();
+      if (_isBusy) return;
       final activePaths = <String>{
         for (final tx in allTxs)
           if (tx.receiptPath != null && tx.receiptPath!.isNotEmpty)
@@ -222,11 +232,14 @@ class AssistantController extends ChangeNotifier {
     _lastFailedText = null;
     _lastFailedReceiptSource = null;
     _safeNotify();
+    final epoch = _resetEpoch;
+    bool stale() => epoch != _resetEpoch || _disposed;
 
     try {
       await chats.add(
         ChatMessage(role: ChatRole.user, content: trimmed, createdAt: _now()),
       );
+      if (stale()) return;
       _messages = await chats.all();
       _safeNotify();
 
@@ -236,6 +249,7 @@ class AssistantController extends ChangeNotifier {
         now: _now(),
         currencyStyle: currencyStyle,
       );
+      if (stale()) return;
       if (localAnswer != null) {
         await chats.add(
           ChatMessage(
@@ -254,6 +268,7 @@ class AssistantController extends ChangeNotifier {
         categoriesByType: _categoriesByType(),
         source: source,
       );
+      if (stale()) return;
 
       switch (result) {
         case ExpenseDraftSuccess(:final draft):
@@ -267,6 +282,7 @@ class AssistantController extends ChangeNotifier {
       debugPrint(
         'AssistantController: Mesaj gönderme hatası (${e.runtimeType})',
       );
+      if (stale()) return;
       _errorMessage = 'İşlem sırasında bir hata oluştu. Tekrar deneyebilir veya manuel ekleyebilirsiniz.';
       _lastFailedText = trimmed;
       _lastFailedTextSource = source;
@@ -344,6 +360,8 @@ class AssistantController extends ChangeNotifier {
     _lastFailedText = null;
     _lastFailedReceiptSource = null;
     _safeNotify();
+    final epoch = _resetEpoch;
+    bool stale() => epoch != _resetEpoch || _disposed;
 
     try {
       final result = await receiptPipeline.scanReceiptToDraft(
@@ -351,6 +369,14 @@ class AssistantController extends ChangeNotifier {
         today: _now(),
         categoriesByType: _categoriesByType(),
       );
+
+      if (stale()) {
+        // Sıfırlamadan önce başlamış tarama: taslak oluşturma, görseli sil.
+        if (result case ReceiptDraftSuccess(:final receiptPath)) {
+          await receiptPipeline.scanService.storage.deleteReceipt(receiptPath);
+        }
+        return;
+      }
 
       switch (result) {
         case ReceiptDraftOcrFailure(:final error):
@@ -371,10 +397,17 @@ class AssistantController extends ChangeNotifier {
               createdAt: _now(),
             ),
           );
+          if (stale()) {
+            await receiptPipeline.scanService.storage.deleteReceipt(
+              receiptPath,
+            );
+            return;
+          }
           await _replacePendingDraft(draft, receiptPath: receiptPath);
       }
     } catch (e) {
       debugPrint('AssistantController: Fiş tarama hatası (${e.runtimeType})');
+      if (stale()) return;
       _errorMessage = 'Fiş işlenirken bir hata oluştu. Tekrar deneyebilir veya manuel ekleyebilirsiniz.';
       _lastFailedReceiptSource = source;
     } finally {
