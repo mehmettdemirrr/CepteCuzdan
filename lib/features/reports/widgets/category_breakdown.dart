@@ -34,30 +34,42 @@ class _Breakdown extends StatelessWidget {
       child: Column(
         children: [
           for (final row in data.rows)
-            ListTile(
-              leading: categories.byId(row.categoryId) == null
-                  ? const CircleAvatar(child: Icon(Icons.help_outline))
-                  : CategoryAvatar(categories.byId(row.categoryId)!),
-              title: Text(categories.byId(row.categoryId)?.name ?? 'Kategori'),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text.rich(
-                    TextSpan(
-                      children: [
-                        const TextSpan(text: 'Önceki: '),
-                        WidgetSpan(
-                          alignment: PlaceholderAlignment.baseline,
-                          baseline: TextBaseline.alphabetic,
-                          child: AmountText(row.previous, style: small),
-                        ),
-                      ],
+            // Ekran okuyucu: önce bu dönem, sonra önceki dönem ve değişim.
+            Semantics(
+              container: true,
+              excludeSemantics: true,
+              label:
+                  '${categories.byId(row.categoryId)?.name ?? 'Kategori'}: '
+                  '${spokenAmount(row.current)}, '
+                  'önceki ${spokenAmount(row.previous)}, '
+                  '${spokenChange(row.change)}',
+              child: ListTile(
+                leading: categories.byId(row.categoryId) == null
+                    ? const CircleAvatar(child: Icon(Icons.help_outline))
+                    : CategoryAvatar(categories.byId(row.categoryId)!),
+                title: Text(
+                  categories.byId(row.categoryId)?.name ?? 'Kategori',
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text.rich(
+                      TextSpan(
+                        children: [
+                          const TextSpan(text: 'Önceki: '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: AmountText(row.previous, style: small),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (large) amounts(row.current, row.change),
-                ],
+                    if (large) amounts(row.current, row.change),
+                  ],
+                ),
+                trailing: large ? null : amounts(row.current, row.change),
               ),
-              trailing: large ? null : amounts(row.current, row.change),
             ),
           const Divider(height: 1),
           ListTile(

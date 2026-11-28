@@ -19,10 +19,19 @@ class ChangeBadge extends StatelessWidget {
     };
     return Text(
       text,
+      semanticsLabel: spokenChange(c),
       style: Theme.of(context).textTheme.labelMedium?.copyWith(color: color),
     );
   }
 }
+
+/// Ekran okuyucu için değişim: "▲ %12" yerine "yüzde 12 arttı".
+String spokenChange(int? change) => switch (change) {
+  null => 'yeni',
+  0 => 'değişmedi',
+  > 0 => 'yüzde $change arttı',
+  _ => 'yüzde ${-change} azaldı',
+};
 
 class _TotalsCard extends StatelessWidget {
   const _TotalsCard({required this.data});

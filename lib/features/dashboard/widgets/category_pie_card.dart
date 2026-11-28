@@ -136,15 +136,18 @@ class _BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Yüzde alttaki cümlede okunur; çubuk ayrıca yalın sayı okutmasın.
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: ratio.clamp(0, 1).toDouble(),
-              minHeight: 10,
-              color: ratio > 1 ? money.expense : money.income,
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest,
+            child: ExcludeSemantics(
+              child: LinearProgressIndicator(
+                value: ratio.clamp(0, 1).toDouble(),
+                minHeight: 10,
+                color: ratio > 1 ? money.expense : money.income,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest,
+              ),
             ),
           ),
           const SizedBox(height: 8),

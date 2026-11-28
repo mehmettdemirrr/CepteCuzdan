@@ -152,6 +152,66 @@ void main() {
     h.dispose();
   });
 
+  // Telefonda TalkBack öncesi bulundu: ilerleme çubuklarının yüzdesi
+  // ("13", "67") ne olduğu söylenmeden okunuyordu.
+  testWidgets('Ana Sayfa: ilerleme çubuğu yalın sayı okutmaz', (t) async {
+    final h = t.ensureSemantics();
+    await pumpApp(t, const DashboardScreen(), deps: await _fullData());
+    await t.pumpAndSettle();
+    for (var i = 0; i < 6; i++) {
+      expect(
+        find.semantics.byPredicate((n) => n.value.isNotEmpty),
+        findsNothing,
+      );
+      await t.drag(find.byType(Scrollable).first, const Offset(0, -300));
+      await t.pumpAndSettle();
+    }
+    h.dispose();
+  });
+
+  testWidgets('kalan bütçe kartı tek cümleyle okunur', (t) async {
+    final h = t.ensureSemantics();
+    await pumpApp(t, const DashboardScreen(), deps: await _fullData());
+    await t.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(
+        RegExp(
+          r'^Kalan bütçe: [\d.,]+ lira\. 1\.500,00 liralık bütçenin '
+          r'[\d.,]+ lirası harcandı, yüzde \d+\.$',
+        ),
+      ),
+      findsOneWidget,
+    );
+    h.dispose();
+  });
+
+  testWidgets('rapor dökümü: önce bu dönem, sonra önceki dönem okunur', (
+    t,
+  ) async {
+    final h = t.ensureSemantics();
+    await pumpApp(t, const ReportScreen(), deps: await _fullData());
+    await t.pumpAndSettle();
+    await t.scrollUntilVisible(
+      find.text('Döküm'),
+      150,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await t.pumpAndSettle();
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'^Market: [\d.,]+ lira, önceki [\d.,]+ lira, yüzde \d+ arttı$'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'^Ulaşım: [\d.,]+ lira, önceki 0,00 lira, yeni$'),
+      ),
+      findsOneWidget,
+    );
+    h.dispose();
+  });
+
   testWidgets('çubuk grafik ekran okuyucuya özetlenir', (t) async {
     final h = t.ensureSemantics();
     await pumpApp(t, const ReportScreen(), deps: await _fullData());
