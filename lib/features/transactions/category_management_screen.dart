@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ui/responsive.dart';
+
 import '../../core/models/category.dart';
 import '../../core/models/enums.dart';
 import '../../core/ui/widgets/category_avatar.dart';
@@ -80,25 +82,31 @@ class _CategoryList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final categories = context.watch<CategoryProvider>().ofType(type);
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 88),
-      children: [
-        for (final c in categories)
-          ListTile(
-            leading: CategoryAvatar(c),
-            title: Text(c.name),
-            subtitle: c.isDefault ? const Text('Varsayılan') : null,
-            onTap: () => showCategoryEditor(context, type: type, initial: c),
-            trailing: c.isDefault
-                ? null
-                : IconButton(
-                    key: Key('delete-category-${c.id}'),
-                    tooltip: 'Sil',
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _delete(context, c),
-                  ),
-          ),
-      ],
+    return SafeArea(
+      top: false,
+      child: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 88),
+          children: [
+            for (final c in categories)
+              ListTile(
+                leading: CategoryAvatar(c),
+                title: Text(c.name),
+                subtitle: c.isDefault ? const Text('Varsayılan') : null,
+                onTap: () =>
+                    showCategoryEditor(context, type: type, initial: c),
+                trailing: c.isDefault
+                    ? null
+                    : IconButton(
+                        key: Key('delete-category-${c.id}'),
+                        tooltip: 'Sil',
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => _delete(context, c),
+                      ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -17,6 +17,8 @@ Future<void> showCategoryEditor(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
+    // Yatayda çentik ve durum çubuğu altına girmesin.
+    useSafeArea: true,
     builder: (_) => CategoryEditorSheet(type: type, initial: initial),
   );
 }
@@ -131,11 +133,10 @@ class _CategoryEditorSheetState extends State<CategoryEditorSheet> {
               Text('Renk', style: theme.textTheme.labelLarge),
               const SizedBox(height: 8),
               Wrap(
-                spacing: 8,
-                runSpacing: 8,
                 children: [
-                  for (final color in categoryPalette)
+                  for (final (i, color) in categoryPalette.indexed)
                     _ColorDot(
+                      label: 'Renk ${i + 1}',
                       color: color,
                       selected: color.toARGB32() == _color,
                       onTap: () => setState(() => _color = color.toARGB32()),
@@ -152,6 +153,7 @@ class _CategoryEditorSheetState extends State<CategoryEditorSheet> {
                   for (final entry in categoryIcons.entries)
                     IconButton(
                       key: Key('icon-${entry.key}'),
+                      tooltip: categoryIconLabels[entry.key] ?? entry.key,
                       isSelected: entry.key == _icon,
                       style: IconButton.styleFrom(
                         backgroundColor: entry.key == _icon
@@ -178,36 +180,50 @@ class _CategoryEditorSheetState extends State<CategoryEditorSheet> {
 
 class _ColorDot extends StatelessWidget {
   const _ColorDot({
+    required this.label,
     required this.color,
     required this.selected,
     required this.onTap,
   });
 
+  final String label;
   final Color color;
   final bool selected;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      customBorder: const CircleBorder(),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: selected
-              ? Border.all(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  width: 3,
-                )
-              : null,
+    // Görünen nokta 36 dp, dokunma alanı 48 dp.
+    return Semantics(
+      label: label,
+      button: true,
+      selected: selected,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: SizedBox.square(
+          dimension: 48,
+          child: Center(
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: selected
+                    ? Border.all(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        width: 3,
+                      )
+                    : null,
+              ),
+              child: selected
+                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  : null,
+            ),
+          ),
         ),
-        child: selected
-            ? const Icon(Icons.check, color: Colors.white, size: 18)
-            : null,
       ),
     );
   }

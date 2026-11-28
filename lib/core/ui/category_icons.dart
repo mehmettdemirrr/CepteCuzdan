@@ -31,6 +31,31 @@ const Map<String, IconData> categoryIcons = {
 
 IconData iconFor(String key) => categoryIcons[key] ?? Icons.category;
 
+/// İkon seçicide ekran okuyucunun ve ipucunun söyleyeceği adlar.
+const Map<String, String> categoryIconLabels = {
+  'shopping_cart': 'Alışveriş arabası',
+  'directions_bus': 'Otobüs',
+  'receipt_long': 'Fatura',
+  'restaurant': 'Restoran',
+  'movie': 'Sinema',
+  'local_hospital': 'Hastane',
+  'category': 'Genel',
+  'payments': 'Ödeme',
+  'savings': 'Birikim',
+  'local_cafe': 'Kafe',
+  'shopping_bag': 'Alışveriş çantası',
+  'home': 'Ev',
+  'school': 'Okul',
+  'pets': 'Evcil hayvan',
+  'fitness_center': 'Spor',
+  'flight': 'Seyahat',
+  'card_giftcard': 'Hediye',
+  'phone_android': 'Telefon',
+  'checkroom': 'Giyim',
+  'work': 'İş',
+  'sports_esports': 'Oyun',
+};
+
 /// Kategori rengi seçenekleri (ARGB).
 const List<Color> categoryPalette = [
   Color(0xFF2E7D32),

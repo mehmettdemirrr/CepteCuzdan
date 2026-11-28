@@ -10,6 +10,21 @@ class DuplicateCategoryException implements Exception {
   String toString() => 'DuplicateCategoryException($name)';
 }
 
+/// [CategoryRepository.update] kuralı: varsayılan kategorinin adı, türü ve
+/// varsayılanlığı değişmez. İki implementasyon da bunu çağırır.
+void checkDefaultCategoryUpdate(Category stored, Category updated) {
+  if (!stored.isDefault) return;
+  if (updated.name != stored.name ||
+      updated.type != stored.type ||
+      !updated.isDefault) {
+    throw ArgumentError.value(
+      updated.name,
+      'category',
+      'Varsayılan kategorinin adı ve türü değiştirilemez',
+    );
+  }
+}
+
 abstract class CategoryRepository {
   /// Kategoriler, eklenme sırasıyla (varsayılanlar önce).
   Future<List<Category>> all({TxType? type});
@@ -22,6 +37,9 @@ abstract class CategoryRepository {
   Future<int> add(Category c);
 
   /// Aynı ad+tip başka kategoride varsa [DuplicateCategoryException].
+  /// Varsayılan kategoride ad, tür veya varsayılanlık değişirse
+  /// [ArgumentError] ("Diğer" yedek kategori olarak adıyla bulunur); renk ve
+  /// ikon değişebilir.
   Future<void> update(Category c);
 
   /// Varsayılan kategoride [StateError]. İşlemleri aynı tipteki "Diğer"e

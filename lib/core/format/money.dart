@@ -1,5 +1,7 @@
 import 'package:intl/intl.dart';
 
+import '../models/enums.dart';
+
 /// Tutarın ekranda nasıl yazılacağı: `₺1.234,50` ya da `1.234,50 TL`.
 enum CurrencyStyle { symbol, code }
 
@@ -80,3 +82,15 @@ int? parseTlToKurus(String input) {
 
 /// Ondalıklı TL değerini (ör. Gemini'nin `320.00`'ı) kuruşa çevirir.
 int tlToKurus(num tl) => (tl * 100).round();
+
+/// Ekran okuyucunun söyleyeceği tutar: `150,00 lira gider`,
+/// `5.000,00 lira gelir`, `eksi 500,00 lira`. "₺" ve "-" işaretleri TalkBack'te
+/// anlaşılır okunmadığı için kelimeyle yazılır.
+String spokenAmount(int kurus, {TxType? type}) {
+  final body = '${_number.format(kurus.abs() / 100)} lira';
+  return switch (type) {
+    TxType.expense => '$body gider',
+    TxType.income => '$body gelir',
+    null => kurus < 0 ? 'eksi $body' : body,
+  };
+}

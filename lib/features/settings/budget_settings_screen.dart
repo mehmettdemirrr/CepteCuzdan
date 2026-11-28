@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ui/responsive.dart';
+
 import '../../core/format/dates.dart';
 import '../../core/format/money.dart';
 import '../../core/models/category.dart';
@@ -126,9 +128,18 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
           for (final c in categories) c.id!: parse(_controllerFor(c.id!)),
         },
       );
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      // Alanlar olduğu gibi kalır; değişiklik "kaydedilmedi" sayılır.
+      debugPrint('Bütçe kaydedilemedi: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bütçe kaydedilemedi')),
+      );
+      return;
     }
+    if (!mounted) return;
+    setState(() => _saving = false);
     _saved = _snapshot();
     messenger.showSnackBar(const SnackBar(content: Text('Bütçe kaydedildi')));
   }
@@ -153,81 +164,91 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
           ),
         ],
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Row(
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: kMaxFormWidth,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
               children: [
-                IconButton(
-                  tooltip: 'Önceki ay',
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: _loading || _saving ? null : () => _shiftMonth(-1),
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Önceki ay',
+                      icon: const Icon(Icons.chevron_left),
+                      onPressed: _loading || _saving
+                          ? null
+                          : () => _shiftMonth(-1),
+                    ),
+                    Expanded(
+                      child: Text(
+                        _monthTitle.format(_month),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Sonraki ay',
+                      icon: const Icon(Icons.chevron_right),
+                      onPressed: _loading || _saving
+                          ? null
+                          : () => _shiftMonth(1),
+                    ),
+                  ],
                 ),
-                Expanded(
-                  child: Text(
-                    _monthTitle.format(_month),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium,
+                const SizedBox(height: 8),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else ...[
+                  TextFormField(
+                    key: const Key('budget-overall'),
+                    controller: _overall,
+                    keyboardType: amountKeyboard,
+                    decoration: const InputDecoration(
+                      labelText: 'Aylık genel bütçe',
+                      prefixText: '₺ ',
+                      helperText: 'Boş bırakırsan genel bütçe olmaz',
+                    ),
+                    validator: _validate,
                   ),
-                ),
-                IconButton(
-                  tooltip: 'Sonraki ay',
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: _loading || _saving ? null : () => _shiftMonth(1),
-                ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Kategori limitleri',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  for (final c in categories)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          CategoryAvatar(c, size: 36),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextFormField(
+                              key: Key('budget-cat-${c.id}'),
+                              controller: _controllerFor(c.id!),
+                              keyboardType: amountKeyboard,
+                              decoration: InputDecoration(
+                                labelText: c.name,
+                                prefixText: '₺ ',
+                                isDense: true,
+                              ),
+                              validator: _validate,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ],
             ),
-            const SizedBox(height: 8),
-            if (_loading)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else ...[
-              TextFormField(
-                key: const Key('budget-overall'),
-                controller: _overall,
-                keyboardType: amountKeyboard,
-                decoration: const InputDecoration(
-                  labelText: 'Aylık genel bütçe',
-                  prefixText: '₺ ',
-                  helperText: 'Boş bırakırsan genel bütçe olmaz',
-                ),
-                validator: _validate,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Kategori limitleri',
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-              const SizedBox(height: 8),
-              for (final c in categories)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    children: [
-                      CategoryAvatar(c, size: 36),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: TextFormField(
-                          key: Key('budget-cat-${c.id}'),
-                          controller: _controllerFor(c.id!),
-                          keyboardType: amountKeyboard,
-                          decoration: InputDecoration(
-                            labelText: c.name,
-                            prefixText: '₺ ',
-                            isDense: true,
-                          ),
-                          validator: _validate,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          ],
+          ),
         ),
       ),
     );

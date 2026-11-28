@@ -7,10 +7,14 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <!-- Türkçe sesli komut için mikrofon izni -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <!-- Yedekleme kapalı: bütçe, işlem ve fiş verisi kişisel; Google Drive
+         yedeğine gitmez. -->
     <application
         android:label="CepteCüzdan"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -48,6 +48,15 @@ class SqliteCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> update(Category c) async {
+    final rows = await _db.query(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [c.id],
+      limit: 1,
+    );
+    if (rows.isNotEmpty) {
+      checkDefaultCategoryUpdate(Category.fromMap(rows.first), c);
+    }
     await _ensureUnique(c);
     try {
       await _db.update(

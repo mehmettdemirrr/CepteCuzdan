@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../../app/shell.dart';
 import '../../core/format/money.dart';
 import '../../core/ui/app_theme.dart';
+import '../../core/ui/responsive.dart';
 import '../../core/ui/widgets/amount_text.dart';
 import '../../core/ui/widgets/empty_state.dart';
 import '../budget/budget_status.dart';
@@ -72,29 +73,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 : const Center(child: CircularProgressIndicator()))
           : RefreshIndicator(
               onRefresh: p.load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  _RemainingCard(data: data),
-                  const SizedBox(height: 12),
-                  _IncomeExpenseRow(data: data),
-                  if (data.categoryLines.any(
-                    (l) => l.level != BudgetLevel.ok,
-                  )) ...[
-                    const SizedBox(height: 12),
-                    _BudgetBadges(lines: data.categoryLines),
-                  ],
-                  const SizedBox(height: 12),
-                  _CategoryPieCard(data: data),
-                  if (data.summary.incomeTotal > 0) ...[
-                    const SizedBox(height: 12),
-                    _BalanceCard(data: data),
-                  ],
-                  const SizedBox(height: 12),
-                  _RecentCard(data: data),
-                ],
-              ),
+              child: SafeArea(top: false, child: _DashboardBody(data: data)),
             ),
+    );
+  }
+}
+
+/// Dar ekranda tek sütun; geniş ekranda ve yatay telefonda solda bütçe ve
+/// özet kartları, sağda harcama dağılımı ve son işlemler.
+class _DashboardBody extends StatelessWidget {
+  const _DashboardBody({required this.data});
+  final DashboardData data;
+
+  @override
+  Widget build(BuildContext context) {
+    const gap = SizedBox(height: 12);
+    final left = <Widget>[
+      _RemainingCard(data: data),
+      gap,
+      _IncomeExpenseRow(data: data),
+      if (data.categoryLines.any((l) => l.level != BudgetLevel.ok)) ...[
+        gap,
+        _BudgetBadges(lines: data.categoryLines),
+      ],
+      if (data.summary.incomeTotal > 0) ...[gap, _BalanceCard(data: data)],
+    ];
+    final right = <Widget>[
+      _CategoryPieCard(data: data),
+      gap,
+      _RecentCard(data: data),
+    ];
+    const padding = EdgeInsets.fromLTRB(16, 8, 16, 24);
+
+    if (!isWide(context)) {
+      return ListView(padding: padding, children: [...left, gap, ...right]);
+    }
+    return ListView(
+      padding: padding,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Column(children: left)),
+            const SizedBox(width: 16),
+            Expanded(child: Column(children: right)),
+          ],
+        ),
+      ],
     );
   }
 }

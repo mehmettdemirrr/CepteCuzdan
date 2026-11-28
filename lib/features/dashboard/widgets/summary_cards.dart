@@ -46,69 +46,83 @@ class _RemainingCard extends StatelessWidget {
     final overall = data.overall;
     final remaining = data.remaining;
     final cs = Provider.of<CurrencyStyle?>(context) ?? CurrencyStyle.symbol;
-    return Card(
-      color: scheme.primaryContainer,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    final content = Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Kalan Bütçe',
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: scheme.onPrimaryContainer,
+            ),
+          ),
+          const SizedBox(height: 4),
+          if (overall == null || remaining == null) ...[
             Text(
-              'Kalan Bütçe',
-              style: theme.textTheme.labelLarge?.copyWith(
+              'Bütçe tanımlanmadı',
+              style: theme.textTheme.titleLarge?.copyWith(
                 color: scheme.onPrimaryContainer,
               ),
             ),
-            const SizedBox(height: 4),
-            if (overall == null || remaining == null) ...[
-              Text(
-                'Bütçe tanımlanmadı',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: scheme.onPrimaryContainer,
+            const SizedBox(height: 8),
+            FilledButton.tonal(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const BudgetSettingsScreen(),
                 ),
               ),
-              const SizedBox(height: 8),
-              FilledButton.tonal(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const BudgetSettingsScreen(),
-                  ),
-                ),
-                child: const Text('Bütçe belirle'),
+              child: const Text('Bütçe belirle'),
+            ),
+          ] else ...[
+            Text(
+              formatKurus(remaining, style: cs),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: remaining < 0
+                    ? MoneyColors.of(context).expense
+                    : scheme.onPrimaryContainer,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
-            ] else ...[
-              Text(
-                formatKurus(remaining, style: cs),
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: remaining < 0
-                      ? MoneyColors.of(context).expense
-                      : scheme.onPrimaryContainer,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: overall.ratio.clamp(0, 1).toDouble(),
+                minHeight: 8,
+                color: _levelColor(context, overall.level),
+                backgroundColor: scheme.surface.withValues(alpha: 0.6),
               ),
-              const SizedBox(height: 12),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: overall.ratio.clamp(0, 1).toDouble(),
-                  minHeight: 8,
-                  color: _levelColor(context, overall.level),
-                  backgroundColor: scheme.surface.withValues(alpha: 0.6),
-                ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              '${formatKurus(overall.spent, style: cs)} / '
+              '${formatKurus(overall.budget.limitAmount, style: cs)}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: scheme.onPrimaryContainer,
               ),
-              const SizedBox(height: 6),
-              Text(
-                '${formatKurus(overall.spent, style: cs)} / '
-                '${formatKurus(overall.budget.limitAmount, style: cs)}',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: scheme.onPrimaryContainer,
-                ),
-              ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
+    );
+    return Card(
+      color: scheme.primaryContainer,
+      // Ekran okuyucu: ilerleme çubuğunun yalın yüzdesi ve ₺ işaretleri
+      // yerine tek bir cümle.
+      child: overall == null || remaining == null
+          ? content
+          : Semantics(
+              container: true,
+              excludeSemantics: true,
+              label:
+                  'Kalan bütçe: ${spokenAmount(remaining)}. '
+                  '${spokenAmount(overall.budget.limitAmount)}lık bütçenin '
+                  '${spokenAmount(overall.spent)}sı harcandı, '
+                  'yüzde ${(overall.ratio * 100).round()}.',
+              child: content,
+            ),
     );
   }
 }
@@ -139,7 +153,13 @@ class _IncomeExpenseRow extends StatelessWidget {
               children: [
                 Icon(icon, size: 18, color: color),
                 const SizedBox(width: 6),
-                Text(label, style: Theme.of(context).textTheme.labelLarge),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -156,25 +176,30 @@ class _IncomeExpenseRow extends StatelessWidget {
         ),
       ),
     );
+    final income = tile(
+      'Gelir',
+      data.summary.incomeTotal,
+      money.income,
+      Icons.arrow_downward,
+    );
+    final expense = tile(
+      'Gider',
+      data.summary.expenseTotal,
+      money.expense,
+      Icons.arrow_upward,
+    );
+    // Büyük yazıda yan yana sığmaz: alt alta.
+    if (MediaQuery.textScalerOf(context).scale(1) >= 1.5) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [income, const SizedBox(height: 12), expense],
+      );
+    }
     return Row(
       children: [
-        Expanded(
-          child: tile(
-            'Gelir',
-            data.summary.incomeTotal,
-            money.income,
-            Icons.arrow_downward,
-          ),
-        ),
+        Expanded(child: income),
         const SizedBox(width: 12),
-        Expanded(
-          child: tile(
-            'Gider',
-            data.summary.expenseTotal,
-            money.expense,
-            Icons.arrow_upward,
-          ),
-        ),
+        Expanded(child: expense),
       ],
     );
   }

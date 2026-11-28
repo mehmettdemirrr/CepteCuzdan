@@ -76,3 +76,18 @@ DateTime fromDbDate(String s) => _dbDate.parseStrict(s);
 
 /// Bütçe ayı anahtarı: `yyyy-MM`.
 String monthKey(DateTime d) => _monthKey.format(d);
+
+/// Tarih seçicilerin aralığı: bugünden 5 yıl önce – 1 yıl sonra (asistanın
+/// kabul ettiği tarih penceresiyle uyumlu). Gösterilecek tarih ([start],
+/// [end]) bu aralığın dışındaysa aralık onu kapsayacak şekilde genişler;
+/// eski bir kayıt açıldığında seçici `initialDate` dışarıda diye çökmez.
+DateRange pickerRange(DateTime today, {DateTime? start, DateTime? end}) {
+  var first = DateTime(today.year - 5, today.month, today.day);
+  var last = DateTime(today.year + 1, today.month, today.day);
+  for (final d in [?start, ?end]) {
+    final day = DateTime(d.year, d.month, d.day);
+    if (day.isBefore(first)) first = day;
+    if (day.isAfter(last)) last = day;
+  }
+  return DateRange(first, last);
+}

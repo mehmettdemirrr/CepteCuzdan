@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ui/responsive.dart';
+
+import '../../core/format/dates.dart';
 import '../../core/format/money.dart';
 import '../../core/models/enums.dart';
 import '../../core/models/transaction_record.dart';
@@ -57,11 +60,12 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<void> _pickDate() async {
+    final range = pickerRange(DateTime.now(), start: _date);
     final picked = await showDatePicker(
       context: context,
       initialDate: _date,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: range.start,
+      lastDate: range.end,
       locale: const Locale('tr', 'TR'),
     );
     if (picked != null) setState(() => _date = picked);
@@ -96,9 +100,17 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       } else {
         await txs.add(record);
       }
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      // Form açık kalır, girilen değerler kaybolmaz.
+      debugPrint('İşlem kaydedilemedi: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('İşlem kaydedilemedi')),
+      );
+      return;
     }
+    if (!mounted) return;
     messenger.showSnackBar(const SnackBar(content: Text('İşlem kaydedildi')));
     navigator.pop(true);
   }
@@ -112,111 +124,123 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
 
     return Scaffold(
       appBar: AppBar(title: Text(_isEdit ? 'İşlemi düzenle' : 'Yeni işlem')),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SegmentedButton<TxType>(
-              segments: const [
-                ButtonSegment(
-                  value: TxType.expense,
-                  label: Text('Gider'),
-                  icon: Icon(Icons.arrow_upward),
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: kMaxFormWidth,
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                SegmentedButton<TxType>(
+                  segments: const [
+                    ButtonSegment(
+                      value: TxType.expense,
+                      label: Text('Gider'),
+                      icon: Icon(Icons.arrow_upward),
+                    ),
+                    ButtonSegment(
+                      value: TxType.income,
+                      label: Text('Gelir'),
+                      icon: Icon(Icons.arrow_downward),
+                    ),
+                  ],
+                  selected: {_type},
+                  onSelectionChanged: (s) => setState(() {
+                    _type = s.first;
+                    _categoryId = null;
+                  }),
                 ),
-                ButtonSegment(
-                  value: TxType.income,
-                  label: Text('Gelir'),
-                  icon: Icon(Icons.arrow_downward),
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: const Key('amount-field'),
+                  controller: _amount,
+                  autofocus: !_isEdit,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  decoration: const InputDecoration(
+                    labelText: 'Tutar',
+                    prefixText: '₺ ',
+                    hintText: '0,00',
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Tutar giriniz';
+                    if (parseTlToKurus(v) == null) {
+                      return 'Geçerli bir tutar giriniz';
+                    }
+                    return null;
+                  },
                 ),
-              ],
-              selected: {_type},
-              onSelectionChanged: (s) => setState(() {
-                _type = s.first;
-                _categoryId = null;
-              }),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              key: const Key('amount-field'),
-              controller: _amount,
-              autofocus: !_isEdit,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              decoration: const InputDecoration(
-                labelText: 'Tutar',
-                prefixText: '₺ ',
-                hintText: '0,00',
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Tutar giriniz';
-                if (parseTlToKurus(v) == null) {
-                  return 'Geçerli bir tutar giriniz';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<int>(
-              key: const Key('category-field'),
-              initialValue: selected,
-              decoration: const InputDecoration(labelText: 'Kategori'),
-              items: [
-                for (final c in categories)
-                  DropdownMenuItem(
-                    value: c.id,
-                    child: Row(
-                      children: [
-                        CategoryAvatar(c, size: 28),
-                        const SizedBox(width: 12),
-                        Text(c.name),
-                      ],
+                const SizedBox(height: 16),
+                DropdownButtonFormField<int>(
+                  key: const Key('category-field'),
+                  initialValue: selected,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Kategori'),
+                  items: [
+                    for (final c in categories)
+                      DropdownMenuItem(
+                        value: c.id,
+                        child: Row(
+                          children: [
+                            CategoryAvatar(c, size: 28),
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: Text(
+                                c.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                  onChanged: (v) => setState(() => _categoryId = v),
+                  validator: (v) => v == null ? 'Kategori seçiniz' : null,
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  key: const Key('date-field'),
+                  onTap: _pickDate,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Tarih',
+                      suffixIcon: Icon(Icons.calendar_today),
+                    ),
+                    child: Text(
+                      DateFormat('d MMMM y, EEEE', 'tr_TR').format(_date),
                     ),
                   ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: const Key('merchant-field'),
+                  controller: _merchant,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'İşletme (isteğe bağlı)',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  key: const Key('note-field'),
+                  controller: _note,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Açıklama (isteğe bağlı)',
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: const Text('Kaydet'),
+                ),
               ],
-              onChanged: (v) => setState(() => _categoryId = v),
-              validator: (v) => v == null ? 'Kategori seçiniz' : null,
             ),
-            const SizedBox(height: 16),
-            InkWell(
-              key: const Key('date-field'),
-              onTap: _pickDate,
-              child: InputDecorator(
-                decoration: const InputDecoration(
-                  labelText: 'Tarih',
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                child: Text(
-                  DateFormat('d MMMM y, EEEE', 'tr_TR').format(_date),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              key: const Key('merchant-field'),
-              controller: _merchant,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'İşletme (isteğe bağlı)',
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              key: const Key('note-field'),
-              controller: _note,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(
-                labelText: 'Açıklama (isteğe bağlı)',
-              ),
-              maxLines: 2,
-            ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _saving ? null : _save,
-              child: const Text('Kaydet'),
-            ),
-          ],
+          ),
         ),
       ),
     );

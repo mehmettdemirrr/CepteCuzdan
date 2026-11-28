@@ -210,6 +210,8 @@ class FakeCategoryRepository implements CategoryRepository {
 
   @override
   Future<void> update(Category c) async {
+    final stored = _s.categories.where((x) => x.id == c.id).firstOrNull;
+    if (stored != null) checkDefaultCategoryUpdate(stored, c);
     if (_taken(c.name, c.type, exceptId: c.id)) {
       throw DuplicateCategoryException(c.name);
     }

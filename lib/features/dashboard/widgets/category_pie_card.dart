@@ -20,48 +20,60 @@ class _CategoryPieCard extends StatelessWidget {
     final entries = data.summary.expenseByCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final theme = Theme.of(context);
+    // Yatay ekranda grafik küçülür (dikey 200 → yatay 144 dp); halka
+    // kalınlığı ve ortadaki boşluk yükseklikle orantılı.
+    final height = chartHeight(context, max: 180);
+    final ring = height * 0.2;
+    final hole = height * 0.29;
 
     return _Section(
       title: 'Harcama dağılımı',
       child: Column(
         children: [
-          SizedBox(
-            height: 180,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 2,
-                    centerSpaceRadius: 52,
-                    sections: [
-                      for (final e in entries)
-                        PieChartSectionData(
-                          value: e.value.toDouble(),
-                          color: Color(
-                            categories.byId(e.key)?.color ?? 0xFF9E9E9E,
+          Semantics(
+            label:
+                'Harcama dağılımı: '
+                '${[for (final e in entries) '${categories.byId(e.key)?.name ?? 'Kategori'} yüzde ${(e.value * 100 / total).round()}'].join(', ')}',
+            container: true,
+            excludeSemantics: true,
+            child: SizedBox(
+              height: height,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sectionsSpace: 2,
+                      centerSpaceRadius: hole,
+                      sections: [
+                        for (final e in entries)
+                          PieChartSectionData(
+                            value: e.value.toDouble(),
+                            color: Color(
+                              categories.byId(e.key)?.color ?? 0xFF9E9E9E,
+                            ),
+                            radius: ring,
+                            title: e.value / total >= 0.08
+                                ? '%${(e.value * 100 / total).round()}'
+                                : '',
+                            titleStyle: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          radius: 36,
-                          title: e.value / total >= 0.08
-                              ? '%${(e.value * 100 / total).round()}'
-                              : '',
-                          titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Toplam', style: theme.textTheme.labelSmall),
+                      AmountText(total, style: theme.textTheme.titleSmall),
                     ],
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Toplam', style: theme.textTheme.labelSmall),
-                    AmountText(total, style: theme.textTheme.titleSmall),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -79,15 +91,28 @@ class _CategoryPieCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // Dar ekranda / büyük yazıda yüzde ve tutar alt satıra iner.
                   Expanded(
-                    child: Text(categories.byId(e.key)?.name ?? 'Kategori'),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      children: [
+                        Text(categories.byId(e.key)?.name ?? 'Kategori'),
+                        Wrap(
+                          spacing: 12,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              '%${(e.value * 100 / total).round()}',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            AmountText(e.value),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(
-                    '%${(e.value * 100 / total).round()}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(width: 12),
-                  AmountText(e.value),
                 ],
               ),
             ),
@@ -111,15 +136,18 @@ class _BalanceCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Yüzde alttaki cümlede okunur; çubuk ayrıca yalın sayı okutmasın.
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: ratio.clamp(0, 1).toDouble(),
-              minHeight: 10,
-              color: ratio > 1 ? money.expense : money.income,
-              backgroundColor: Theme.of(context)
-                  .colorScheme
-                  .surfaceContainerHighest,
+            child: ExcludeSemantics(
+              child: LinearProgressIndicator(
+                value: ratio.clamp(0, 1).toDouble(),
+                minHeight: 10,
+                color: ratio > 1 ? money.expense : money.income,
+                backgroundColor: Theme.of(context)
+                    .colorScheme
+                    .surfaceContainerHighest,
+              ),
             ),
           ),
           const SizedBox(height: 8),

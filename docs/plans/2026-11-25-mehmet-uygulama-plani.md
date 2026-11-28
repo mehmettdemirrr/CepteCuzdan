@@ -723,7 +723,9 @@ Kurallar ve bugün yaşanan hatalardan çıkarılan dersler: **`docs/gelistirme-
 - Test: `test/core/ui/responsive_test.dart`
 
 **Interfaces:**
-- Produces (iki geliştirici de kullanır):
+- Produces (iki geliştirici de kullanır). **Uygulamada:** `TestScreen` + yazı ölçeği + sistem payı tek bir `ScreenCase` nesnesinde birleşti; `testScreens` gövdesi `(t, screen)` alır ve `pumpApp(t, w, screen: screen)` çağırır.
+
+
 
 ```dart
 // lib/core/ui/responsive.dart
@@ -815,3 +817,29 @@ Kararlar:
 - [ ] **Step 5:** Commit (`feat(a11y): dokunma alanı, ekran okuyucu etiketleri, kontrast`).
 
 **Berkay için:** Asistan ekranı (sohbet, onay kartı, kamera ve mikrofon düğmeleri) da `testScreens` ve `a11y_test.dart`'taki aynı kontrollerden geçmeli. Onay kartı yatay ekranda kaydırılabilir olmalı. Mikrofon ve kamera düğmelerinde tooltip olmalı. Kaydet / Düzenle / İptal düğmeleri en az 48 dp olmalı.
+
+### Task 17: Berkay'ın Mehmet tarafı için notları (28 Kas)
+
+Berkay PR #2'nin ikinci turunda Mehmet'in kodu için altı not bıraktı; hepsi doğrulandı. Görev 15–16 ile aynı dalda yapılır.
+
+**Files:**
+- Modify: `android/app/src/main/AndroidManifest.xml` (`android:allowBackup="false"`, `android:fullBackupContent="false"`)
+- Modify: `lib/features/transactions/transaction_form_screen.dart`, `lib/features/reports/report_screen.dart` (tarih seçici aralığı)
+- Modify: `lib/features/transactions/transaction_form_screen.dart`, `lib/features/settings/budget_settings_screen.dart` (kayıt hatası)
+- Modify: `lib/features/transactions/transactions_screen.dart` (yükleme hatası, silme hatası)
+- Modify: `lib/core/db/sqlite_category_repository.dart`, `test/fakes/fake_repositories.dart` (varsayılan kategori koruması)
+- Test: `test/review_berkay_notes_test.dart`, `test/core/repositories/repository_contract.dart`
+
+Kararlar:
+- **Yedekleme kapalı.** Bütçe ve fiş verisi kişisel; Google Drive yedeğine gitmez.
+- **Tarih seçici aralığı:** `firstDate` = bugünden 5 yıl önce, `lastDate` = bugünden 1 yıl sonra (asistandaki tarih penceresiyle uyumlu). Kaydın tarihi bu aralığın dışındaysa aralık onu kapsayacak şekilde genişler (`pickerRange`); kayıt değiştirilmez, eski kaydı açmak çökmez.
+- **Kayıt hatası:** `_save` `catch` ile hatayı yakalar, `if (!mounted) return;` sonra "Kaydedilemedi" SnackBar'ı gösterir, ekran açık kalır, girilen değerler kaybolmaz.
+- **İşlem listesi hatası:** `snap.hasError` ve önceki veri yoksa "İşlemler yüklenemedi" + "Tekrar dene". Kaydırarak silme başarısız olursa satır geri gelir ve "İşlem silinemedi" gösterilir.
+- **Varsayılan kategori:** adı ve türü repository düzeyinde de değiştirilemez (`ArgumentError`); arayüz zaten yalnızca renk/ikon değiştiriyor.
+- **SafeArea / 48 dp:** Görev 15–16 kapsamında (yatay ekranda sistem çubuğu ve çentik, kategori sayfası, renk noktaları).
+
+- [ ] **Step 1:** Her not için başarısız test yaz (manifest için dosya içeriği testi).
+- [ ] **Step 2:** `flutter test test/review_berkay_notes_test.dart` → FAIL.
+- [ ] **Step 3:** Düzelt.
+- [ ] **Step 4:** `flutter test` → hepsi PASS.
+- [ ] **Step 5:** Commit (`fix: Berkay'ın notları (yedekleme, tarih aralığı, kayıt/silme hataları, varsayılan kategori)`).

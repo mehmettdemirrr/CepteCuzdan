@@ -25,60 +25,67 @@ class _ComparisonChart extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              height: 200,
-              child: BarChart(
-                BarChartData(
-                  alignment: BarChartAlignment.spaceAround,
-                  gridData: const FlGridData(show: false),
-                  borderData: FlBorderData(show: false),
-                  barTouchData: BarTouchData(enabled: false),
-                  titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(),
-                    rightTitles: const AxisTitles(),
-                    topTitles: const AxisTitles(),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 32,
-                        getTitlesWidget: (value, meta) {
-                          final c = categories.byId(
-                            rows[value.toInt()].categoryId,
-                          );
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 6),
-                            child: Icon(
-                              iconFor(c?.icon ?? ''),
-                              size: 20,
-                              color: Color(c?.color ?? 0xFF9E9E9E),
-                            ),
-                          );
-                        },
+            Semantics(
+              label:
+                  'Bu dönem ve önceki dönem: '
+                  '${[for (final r in rows) '${categories.byId(r.categoryId)?.name ?? 'Kategori'} ${spokenAmount(r.current)}, önceki ${spokenAmount(r.previous)}'].join('; ')}',
+              container: true,
+              excludeSemantics: true,
+              child: SizedBox(
+                height: chartHeight(context),
+                child: BarChart(
+                  BarChartData(
+                    alignment: BarChartAlignment.spaceAround,
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barTouchData: BarTouchData(enabled: false),
+                    titlesData: FlTitlesData(
+                      leftTitles: const AxisTitles(),
+                      rightTitles: const AxisTitles(),
+                      topTitles: const AxisTitles(),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          reservedSize: 32,
+                          getTitlesWidget: (value, meta) {
+                            final c = categories.byId(
+                              rows[value.toInt()].categoryId,
+                            );
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Icon(
+                                iconFor(c?.icon ?? ''),
+                                size: 20,
+                                color: Color(c?.color ?? 0xFF9E9E9E),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  barGroups: [
-                    for (var i = 0; i < rows.length; i++)
-                      BarChartGroupData(
-                        x: i,
-                        barsSpace: 3,
-                        barRods: [
-                          BarChartRodData(
-                            toY: rows[i].previous / 100,
-                            color: previousColor,
-                            width: 10,
-                          ),
-                          BarChartRodData(
-                            toY: rows[i].current / 100,
-                            color: Color(
-                              categories.byId(rows[i].categoryId)?.color ??
-                                  theme.colorScheme.primary.toARGB32(),
+                    barGroups: [
+                      for (var i = 0; i < rows.length; i++)
+                        BarChartGroupData(
+                          x: i,
+                          barsSpace: 3,
+                          barRods: [
+                            BarChartRodData(
+                              toY: rows[i].previous / 100,
+                              color: previousColor,
+                              width: 10,
                             ),
-                            width: 10,
-                          ),
-                        ],
-                      ),
-                  ],
+                            BarChartRodData(
+                              toY: rows[i].current / 100,
+                              color: Color(
+                                categories.byId(rows[i].categoryId)?.color ??
+                                    theme.colorScheme.primary.toARGB32(),
+                              ),
+                              width: 10,
+                            ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -108,7 +115,9 @@ class _Legend extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Flexible(
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
       ],
     );
   }
