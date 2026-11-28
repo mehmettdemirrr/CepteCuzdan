@@ -128,9 +128,18 @@ class _BudgetSettingsScreenState extends State<BudgetSettingsScreen> {
           for (final c in categories) c.id!: parse(_controllerFor(c.id!)),
         },
       );
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      // Alanlar olduğu gibi kalır; değişiklik "kaydedilmedi" sayılır.
+      debugPrint('Bütçe kaydedilemedi: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Bütçe kaydedilemedi')),
+      );
+      return;
     }
+    if (!mounted) return;
+    setState(() => _saving = false);
     _saved = _snapshot();
     messenger.showSnackBar(const SnackBar(content: Text('Bütçe kaydedildi')));
   }

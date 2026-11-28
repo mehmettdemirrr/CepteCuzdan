@@ -28,10 +28,15 @@ class ReportScreen extends StatelessWidget {
   const ReportScreen({super.key});
 
   Future<void> _pickCustom(BuildContext context, ReportProvider p) async {
+    final bounds = pickerRange(
+      DateTime.now(),
+      start: p.range.start,
+      end: p.range.end,
+    );
     final picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: bounds.start,
+      lastDate: bounds.end,
       initialDateRange: DateTimeRange(start: p.range.start, end: p.range.end),
       locale: const Locale('tr', 'TR'),
     );

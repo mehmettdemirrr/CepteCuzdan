@@ -29,6 +29,10 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   /// Dismissible'ın ağaçta kalmaması için hemen gizlenir.
   final _dismissed = <int>{};
 
+  /// Silinemeyip geri gelen satırların anahtar sürümü: aynı karede yeniden
+  /// eklenen satır yeni bir Dismissible olsun (eskisi "kapatıldı" durumunda).
+  final _restored = <int, int>{};
+
   static final _dayHeader = DateFormat('d MMMM y EEEE', 'tr_TR');
 
   void _openForm([TransactionRecord? tx]) {
@@ -95,6 +99,22 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
             future: _future,
             builder: (context, snap) {
               if (snap.hasData) _last = snap.data;
+              // Yükleme hatası: önceki liste varsa o gösterilir, yoksa hata.
+              if (snap.hasError && _last == null) {
+                return EmptyState(
+                  icon: Icons.error_outline,
+                  message: 'İşlemler yüklenemedi',
+                  action: FilledButton(
+                    onPressed: () {
+                      final retry = context.read<TransactionProvider>().query();
+                      setState(() {
+                        _future = retry;
+                      });
+                    },
+                    child: const Text('Tekrar dene'),
+                  ),
+                );
+              }
               final list = (snap.data ?? _last)
                   ?.where((t) => !_dismissed.contains(t.id))
                   .toList();
@@ -125,7 +145,7 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       }
       rows.add(
         Dismissible(
-          key: ValueKey('tx-${tx.id}'),
+          key: ValueKey('tx-${tx.id}-${_restored[tx.id] ?? 0}'),
           direction: DismissDirection.endToStart,
           background: Container(
             color: Theme.of(context).colorScheme.errorContainer,
@@ -140,7 +160,22 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
           onDismissed: (_) async {
             setState(() => _dismissed.add(tx.id!));
             final messenger = ScaffoldMessenger.of(context);
-            await context.read<TransactionProvider>().delete(tx.id!);
+            try {
+              await context.read<TransactionProvider>().delete(tx.id!);
+            } catch (e) {
+              // Silinemeyen satır listeye geri döner.
+              debugPrint('İşlem silinemedi: $e');
+              if (mounted) {
+                setState(() {
+                  _dismissed.remove(tx.id);
+                  _restored.update(tx.id!, (v) => v + 1, ifAbsent: () => 1);
+                });
+              }
+              messenger.showSnackBar(
+                const SnackBar(content: Text('İşlem silinemedi')),
+              );
+              return;
+            }
             messenger.showSnackBar(
               const SnackBar(content: Text('İşlem silindi')),
             );

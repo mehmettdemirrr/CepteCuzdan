@@ -723,7 +723,9 @@ Kurallar ve bugün yaşanan hatalardan çıkarılan dersler: **`docs/gelistirme-
 - Test: `test/core/ui/responsive_test.dart`
 
 **Interfaces:**
-- Produces (iki geliştirici de kullanır):
+- Produces (iki geliştirici de kullanır). **Uygulamada:** `TestScreen` + yazı ölçeği + sistem payı tek bir `ScreenCase` nesnesinde birleşti; `testScreens` gövdesi `(t, screen)` alır ve `pumpApp(t, w, screen: screen)` çağırır.
+
+
 
 ```dart
 // lib/core/ui/responsive.dart
@@ -830,7 +832,7 @@ Berkay PR #2'nin ikinci turunda Mehmet'in kodu için altı not bıraktı; hepsi 
 
 Kararlar:
 - **Yedekleme kapalı.** Bütçe ve fiş verisi kişisel; Google Drive yedeğine gitmez.
-- **Tarih seçici aralığı:** `firstDate` = bugünden 5 yıl önce, `lastDate` = bugünden 1 yıl sonra (asistandaki tarih penceresiyle uyumlu). `initialDate` bu aralığa sıkıştırılır; aralık dışı eski bir kaydı açmak çökmez.
+- **Tarih seçici aralığı:** `firstDate` = bugünden 5 yıl önce, `lastDate` = bugünden 1 yıl sonra (asistandaki tarih penceresiyle uyumlu). Kaydın tarihi bu aralığın dışındaysa aralık onu kapsayacak şekilde genişler (`pickerRange`); kayıt değiştirilmez, eski kaydı açmak çökmez.
 - **Kayıt hatası:** `_save` `catch` ile hatayı yakalar, `if (!mounted) return;` sonra "Kaydedilemedi" SnackBar'ı gösterir, ekran açık kalır, girilen değerler kaybolmaz.
 - **İşlem listesi hatası:** `snap.hasError` ve önceki veri yoksa "İşlemler yüklenemedi" + "Tekrar dene". Kaydırarak silme başarısız olursa satır geri gelir ve "İşlem silinemedi" gösterilir.
 - **Varsayılan kategori:** adı ve türü repository düzeyinde de değiştirilemez (`ArgumentError`); arayüz zaten yalnızca renk/ikon değiştiriyor.

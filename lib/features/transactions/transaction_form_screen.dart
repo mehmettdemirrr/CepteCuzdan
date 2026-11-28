@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/ui/responsive.dart';
 
+import '../../core/format/dates.dart';
 import '../../core/format/money.dart';
 import '../../core/models/enums.dart';
 import '../../core/models/transaction_record.dart';
@@ -59,11 +60,12 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
   }
 
   Future<void> _pickDate() async {
+    final range = pickerRange(DateTime.now(), start: _date);
     final picked = await showDatePicker(
       context: context,
       initialDate: _date,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
+      firstDate: range.start,
+      lastDate: range.end,
       locale: const Locale('tr', 'TR'),
     );
     if (picked != null) setState(() => _date = picked);
@@ -98,9 +100,17 @@ class _TransactionFormScreenState extends State<TransactionFormScreen> {
       } else {
         await txs.add(record);
       }
-    } finally {
-      if (mounted) setState(() => _saving = false);
+    } catch (e) {
+      // Form açık kalır, girilen değerler kaybolmaz.
+      debugPrint('İşlem kaydedilemedi: $e');
+      if (!mounted) return;
+      setState(() => _saving = false);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('İşlem kaydedilemedi')),
+      );
+      return;
     }
+    if (!mounted) return;
     messenger.showSnackBar(const SnackBar(content: Text('İşlem kaydedildi')));
     navigator.pop(true);
   }

@@ -187,6 +187,36 @@ void runRepositoryContract(String label, Future<RepoSet> Function() open) {
         );
       });
 
+      test(
+        'varsayılan kategorinin adı, türü ve varsayılanlığı değişmez',
+        () async {
+          final market = (await r.categories.findByName(
+            'Market',
+            TxType.expense,
+          ))!;
+          expect(
+            () => r.categories.update(market.copyWith(name: 'Bakkal')),
+            throwsArgumentError,
+          );
+          expect(
+            () => r.categories.update(market.copyWith(type: TxType.income)),
+            throwsArgumentError,
+          );
+          expect(
+            () => r.categories.update(market.copyWith(isDefault: false)),
+            throwsArgumentError,
+          );
+          // Renk ve ikon değişebilir.
+          await r.categories.update(market.copyWith(color: 0xFF000000));
+          final after = (await r.categories.findByName(
+            'Market',
+            TxType.expense,
+          ))!;
+          expect(after.color, 0xFF000000);
+          expect(after.isDefault, isTrue);
+        },
+      );
+
       test('varsayılan kategori silinemez', () async {
         final id = await catId('Market');
         expect(() => r.categories.delete(id), throwsStateError);

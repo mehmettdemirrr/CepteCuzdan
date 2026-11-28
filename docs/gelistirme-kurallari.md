@@ -77,6 +77,14 @@ await expectLater(t, meetsGuideline(textContrastGuideline));
 | Uygulamaya geri dönüş | Ay değişse de eski ay gösterilir | `AppLifecycleListener(onResume: ...)` ile yeniden yükle |
 | Bildirim/Firebase başlatma | Hata verirse uygulama hiç açılmaz | `main()` içinde `try/catch`; uygulama yine açılır |
 | Kayıt sonrası yan iş hata verirse | Kullanıcı tekrar kaydeder, çift kayıt olur | Kayıt yazıldıysa yan işlerin hatası yakalanır, kayıt başarılı sayılır |
+| Kayıt hatası yakalanmıyor | Düğme kapalı kalır ya da ekran sessizce kapanır | `_save` içinde `catch` → `if (!mounted) return;` → "Kaydedilemedi" SnackBar'ı; form açık, değerler yerinde |
+| `Dismissible` silme başarısız | Satır kaybolur ya da aynı anahtarla geri eklenince "still part of the tree" | Satırı geri ekle **ve anahtarını değiştir** (`tx-<id>-<sürüm>`) |
+| `setState(() => _x = future)` | "setState() callback argument returned a Future" | Ok fonksiyonu atanan değeri döndürür; `setState(() { _x = future; })` |
+| `showDatePicker(firstDate: DateTime(2020))` | Daha eski bir kayıt açılınca assert ile çöker | `pickerRange(bugün, start: kayıtTarihi)`: aralık kaydı kapsayacak şekilde genişler |
+| `DropdownButtonFormField` dar ekranda / büyük yazıda | İç satır sağdan taşar | `isExpanded: true` + öğe metninde `Flexible` + `ellipsis` |
+| `ListTile.trailing` büyük yazıda | İki satırlı tutar sığmaz, satır bozulur | Yazı ölçeği ≥ 1,5 ise tutarı `subtitle`'a al, `trailing: null` |
+| `Semantics(label:)` kart içinde | Etiket komşu metinlerle birleşir, ekran okuyucu ayrı okumaz | `container: true` + `excludeSemantics: true` |
+| Hata bandında düğmeler kayan alanda | Uzun mesajda "Manuel ekle" görünmez | Yalnızca mesaj kayar; eylem düğmeleri kaymayan kısımda (`Wrap`) |
 
 ## 6. Android ve izinler
 
@@ -105,7 +113,9 @@ await expectLater(t, meetsGuideline(textContrastGuideline));
 ## 9. Test
 
 - Önce test, sonra kod: testi yaz, başarısız olduğunu gör, sonra kodu yaz.
-- Widget testlerinde `pumpApp(tester, widget, deps: TestDeps())` kullanılır (`test/helpers/pump_app.dart`). Varsayılan ekran 360 × 800. Görev 14'ten sonra beş ekran durumu için ayrı bir yardımcı gelecek.
+- Widget testlerinde `pumpApp(tester, widget, deps: TestDeps())` kullanılır (`test/helpers/pump_app.dart`). Varsayılan ekran 360 × 800, üstte 24 dp durum çubuğu payı var (gerçek telefondaki gibi).
+- Beş ekran durumu için `testScreens('...', (t, screen) async { await pumpApp(t, w, screen: screen); ... })` (`test/helpers/screen_matrix.dart`). Yatay durumda solda 32 dp çentik payı var; içerik bu alanın altında kalmamalı. Koyu tema: `pumpApp(..., themeMode: ThemeMode.dark)`.
+- Liste tembel çizilir: ilk ekranın altındaki öğeyi aramadan önce `scrollUntilVisible` ile kaydır.
 - Taşma (overflow) testte hata sayılır; "testte taşıyor ama telefonda sorun yok" diye geçiştirme.
 - Her yeni ekran: beş ekran durumu + açık/koyu tema kontrast + dokunma alanı testleri.
 

@@ -1,4 +1,5 @@
 import 'package:cepte_cuzdan/app/providers.dart';
+import 'package:cepte_cuzdan/core/repositories/budget_repository.dart';
 import 'package:cepte_cuzdan/core/repositories/transaction_repository.dart';
 import 'package:cepte_cuzdan/core/ui/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -16,13 +17,21 @@ export 'screen_matrix.dart';
 
 /// Widget testleri için sahte bağımlılıklar.
 class TestDeps {
-  TestDeps({this.initialPrefs = const {}, this.resetData, this.txsOverride});
+  TestDeps({
+    this.initialPrefs = const {},
+    this.resetData,
+    this.txsOverride,
+    this.budgetsOverride,
+  });
 
   /// Verilirse veri sıfırlama bunu çağırır (hata senaryoları için).
   final Future<void> Function()? resetData;
 
   /// Verilirse işlem repository'si yerine kullanılır (hata senaryoları için).
   final TransactionRepository? txsOverride;
+
+  /// Verilirse bütçe repository'si yerine kullanılır (hata senaryoları için).
+  final BudgetRepository? budgetsOverride;
 
   final repos = FakeRepos();
   final notifier = FakeAlertNotifier();
@@ -40,7 +49,7 @@ class TestDeps {
     return AppDeps(
       txs: txsOverride ?? txs,
       categories: categories,
-      budgets: budgets,
+      budgets: budgetsOverride ?? budgets,
       chats: chats,
       notifier: notifier,
       prefs: await SharedPreferences.getInstance(),
