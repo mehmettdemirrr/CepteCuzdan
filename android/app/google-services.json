@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "667329368685",
+    "project_id": "cepte-cuzdan-69de0",
+    "storage_bucket": "cepte-cuzdan-69de0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:667329368685:android:d1be7924e0636c08706564",
+        "android_client_info": {
+          "package_name": "com.ceptecuzdan.cepte_cuzdan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAIlyP1YMYNxcVVAhPX89ywc1q9kNUTWC8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

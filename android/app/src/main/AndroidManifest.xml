@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Bütçe uyarı bildirimleri (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Gemini / Firebase AI Logic ağ erişimi (release derlemelerinde zorunlu) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Fiş fotoğrafı çekimi için kamera izni -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Türkçe sesli komut için mikrofon izni -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="CepteCüzdan"
         android:name="${applicationName}"
@@ -42,6 +48,10 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Android 11+ konuşma tanıma servisi görünürlüğü -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>
