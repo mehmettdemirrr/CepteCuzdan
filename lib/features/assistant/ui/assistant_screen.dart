@@ -361,7 +361,7 @@ class _ErrorBanner extends StatelessWidget {
   final VoidCallback onManualAdd;
   final VoidCallback onDismiss;
 
-  /// Asistan gövdesinin yüksekliği; bant bunun en fazla dörtte birini alır.
+  /// Asistan gövdesinin yüksekliği; mesaj metni bunun en fazla beşte birini alır.
   final double? availableHeight;
 
   @override
@@ -369,62 +369,68 @@ class _ErrorBanner extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final defaultMax = MediaQuery.sizeOf(context).height < 480 ? 112.0 : 180.0;
+    // Yalnızca mesaj metni kayar; eylem düğmeleri (Tekrar dene, Manuel ekle,
+    // kapat) her zaman görünür kalır. Mesaj, gövde yüksekliğinin en fazla
+    // beşte birini alır (yatay + büyük yazıda taşmasın diye).
+    final defaultMax = MediaQuery.sizeOf(context).height < 480 ? 64.0 : 124.0;
     final available = availableHeight;
-    final maxBannerHeight = available == null || !available.isFinite
+    final maxMessageHeight = available == null || !available.isFinite
         ? defaultMax
-        : (available * 0.25).clamp(48.0, defaultMax);
+        : (available * 0.2).clamp(32.0, defaultMax);
 
     return Material(
       color: scheme.errorContainer,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: maxBannerHeight),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+      child: Padding(
+        padding: const EdgeInsets.only(left: 12, top: 4, bottom: 4),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Icon(Icons.error_outline, color: scheme.onErrorContainer),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.error_outline, color: scheme.onErrorContainer),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      message,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: scheme.onErrorContainer,
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: maxMessageHeight),
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(top: 12, bottom: 4),
+                      child: Text(
+                        message,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: scheme.onErrorContainer,
+                        ),
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Hata mesajını kapat',
-                    constraints: const BoxConstraints(
-                      minWidth: 48,
-                      minHeight: 48,
-                    ),
-                    onPressed: onDismiss,
-                    icon: Icon(Icons.close, color: scheme.onErrorContainer),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      if (canRetry)
+                        TextButton(
+                          onPressed: onRetry,
+                          child: const Text('Tekrar dene'),
+                        ),
+                      TextButton(
+                        onPressed: onManualAdd,
+                        child: const Text('Manuel ekle'),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              Wrap(
-                spacing: 8,
-                runSpacing: 4,
-                children: [
-                  if (canRetry)
-                    TextButton(
-                      onPressed: onRetry,
-                      child: const Text('Tekrar dene'),
-                    ),
-                  TextButton(
-                    onPressed: onManualAdd,
-                    child: const Text('Manuel ekle'),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              tooltip: 'Hata mesajını kapat',
+              constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
+              onPressed: onDismiss,
+              icon: Icon(Icons.close, color: scheme.onErrorContainer),
+            ),
+          ],
         ),
       ),
     );
@@ -544,6 +550,8 @@ class _InputBar extends StatelessWidget {
                   onSubmitted: (_) => onSend(),
                   decoration: const InputDecoration(
                     hintText: 'Harcama veya gelir yazın…',
+                    // Dar alanda (yatay + büyük yazı) ipucu tek satırda kalsın.
+                    hintMaxLines: 1,
                     border: OutlineInputBorder(),
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(

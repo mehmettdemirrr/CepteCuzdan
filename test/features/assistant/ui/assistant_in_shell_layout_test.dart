@@ -1,6 +1,8 @@
 // Asistan ekranı gerçek uygulama kabuğunda (AppShell: üst çubuk + alt
 // gezinme + durum çubuğu), onay kartı ve hata bandıyla beş ekran durumunda
 // taşmamalı.
+import 'dart:io';
+
 import 'package:cepte_cuzdan/app/shell.dart';
 import 'package:cepte_cuzdan/core/repositories/chat_message_repository.dart';
 import 'package:cepte_cuzdan/core/ui/app_theme.dart';
@@ -28,11 +30,15 @@ const _draftJson =
 
 class _Gemini implements GeminiClient {
   String response = _draftJson;
+  Object? error;
   @override
   Future<String> generateDraftJson({
     required String systemInstruction,
     required String userPrompt,
-  }) async => response;
+  }) async {
+    if (error case final e?) throw e;
+    return response;
+  }
 }
 
 class _Picker implements ReceiptImagePicker {
@@ -169,6 +175,21 @@ void main() {
       await _pumpInShell(t, env, size, scale);
       expect(t.takeException(), isNull);
       expect(find.text('Manuel ekle'), findsOneWidget);
+    });
+
+    // Uzun (çok satırlı) hata mesajında da eylem düğmeleri görünür kalmalı;
+    // bandın kayan kısmında giriş çubuğunun altına düşmemeli.
+    testWidgets('uzun hata mesajında Manuel ekle dokunulabilir: $label', (
+      t,
+    ) async {
+      final env = _Env();
+      await t.runAsync(env.init);
+      env.gemini.error = const SocketException('No internet');
+      await env.ctrl.sendText('Kahve 90');
+      await _pumpInShell(t, env, size, scale);
+      expect(t.takeException(), isNull);
+      expect(find.text('Manuel ekle').hitTestable(), findsOneWidget);
+      expect(find.byTooltip('Hata mesajını kapat').hitTestable(), findsOneWidget);
     });
   }
 }
