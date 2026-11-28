@@ -119,7 +119,9 @@ void responsiveShellTests() {
     });
   }
 
-  testWidgets('yatayda yan gezinme ve sayfa çentiğin altında kalmaz', (t) async {
+  testWidgets('yatayda yan gezinme ve sayfa çentiğin altında kalmaz', (
+    t,
+  ) async {
     _setScreen(t, ScreenCase.landscape);
     await t.pumpWidget(_shellApp());
     // Sol 32 dp çentik payı: gezinme öğeleri ve sayfa bu alanın sağında.

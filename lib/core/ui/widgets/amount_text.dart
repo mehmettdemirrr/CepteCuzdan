@@ -33,6 +33,8 @@ class AmountText extends StatelessWidget {
     final base = style ?? DefaultTextStyle.of(context).style;
     return Text(
       text,
+      // TalkBack "₺" ve "-" işaretlerini anlaşılır okumaz.
+      semanticsLabel: spokenAmount(kurus, type: type),
       style: base.copyWith(
         color: color ?? base.color,
         fontFeatures: const [FontFeature.tabularFigures()],

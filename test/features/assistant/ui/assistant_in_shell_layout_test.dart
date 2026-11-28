@@ -189,7 +189,10 @@ void main() {
       await _pumpInShell(t, env, size, scale);
       expect(t.takeException(), isNull);
       expect(find.text('Manuel ekle').hitTestable(), findsOneWidget);
-      expect(find.byTooltip('Hata mesajını kapat').hitTestable(), findsOneWidget);
+      expect(
+        find.byTooltip('Hata mesajını kapat').hitTestable(),
+        findsOneWidget,
+      );
     });
   }
 }

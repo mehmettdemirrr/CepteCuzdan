@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/format/dates.dart';
+import '../../core/format/money.dart';
 import '../../core/models/enums.dart';
 import '../../core/ui/app_theme.dart';
 import '../../core/ui/category_icons.dart';

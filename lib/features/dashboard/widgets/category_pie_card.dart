@@ -30,43 +30,50 @@ class _CategoryPieCard extends StatelessWidget {
       title: 'Harcama dağılımı',
       child: Column(
         children: [
-          SizedBox(
-            height: height,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 2,
-                    centerSpaceRadius: hole,
-                    sections: [
-                      for (final e in entries)
-                        PieChartSectionData(
-                          value: e.value.toDouble(),
-                          color: Color(
-                            categories.byId(e.key)?.color ?? 0xFF9E9E9E,
+          Semantics(
+            label:
+                'Harcama dağılımı: '
+                '${[for (final e in entries) '${categories.byId(e.key)?.name ?? 'Kategori'} yüzde ${(e.value * 100 / total).round()}'].join(', ')}',
+            container: true,
+            excludeSemantics: true,
+            child: SizedBox(
+              height: height,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  PieChart(
+                    PieChartData(
+                      sectionsSpace: 2,
+                      centerSpaceRadius: hole,
+                      sections: [
+                        for (final e in entries)
+                          PieChartSectionData(
+                            value: e.value.toDouble(),
+                            color: Color(
+                              categories.byId(e.key)?.color ?? 0xFF9E9E9E,
+                            ),
+                            radius: ring,
+                            title: e.value / total >= 0.08
+                                ? '%${(e.value * 100 / total).round()}'
+                                : '',
+                            titleStyle: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
-                          radius: ring,
-                          title: e.value / total >= 0.08
-                              ? '%${(e.value * 100 / total).round()}'
-                              : '',
-                          titleStyle: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('Toplam', style: theme.textTheme.labelSmall),
+                      AmountText(total, style: theme.textTheme.titleSmall),
                     ],
                   ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Toplam', style: theme.textTheme.labelSmall),
-                    AmountText(total, style: theme.textTheme.titleSmall),
-                  ],
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
