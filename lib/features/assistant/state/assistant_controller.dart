@@ -103,6 +103,7 @@ class AssistantController extends ChangeNotifier {
   bool get isLoadingHistory => _isLoadingHistory;
   bool get isBusy => _isBusy;
   bool get isListening => _isListening;
+  bool _isStartingVoice = false;
   String get partialSpeechText => _partialSpeechText;
   bool get hasVoiceSupport => speechService != null;
   bool get isSavingDraft => _isSavingDraft;
@@ -297,6 +298,8 @@ class AssistantController extends ChangeNotifier {
   Future<void> toggleVoiceInput() async {
     final service = speechService;
     if (service == null || _isBusy || _isSavingDraft) return;
+    // İzin/başlatma sürerken ikinci dokunma ikinci bir dinleme açmasın.
+    if (_isStartingVoice) return;
 
     if (_isListening) {
       await service.stopListening();
@@ -310,24 +313,30 @@ class AssistantController extends ChangeNotifier {
     _partialSpeechText = '';
     _safeNotify();
 
-    final startError = await service.startListening(
-      onPartial: (partial) {
-        _partialSpeechText = partial;
-        _safeNotify();
-      },
-      onFinal: (finalText) {
-        _isListening = false;
-        _partialSpeechText = '';
-        _safeNotify();
-        sendText(finalText, source: TxSource.voice);
-      },
-      onError: (error) {
-        _isListening = false;
-        _partialSpeechText = '';
-        _errorMessage = error.userMessage;
-        _safeNotify();
-      },
-    );
+    _isStartingVoice = true;
+    final SpeechError? startError;
+    try {
+      startError = await service.startListening(
+        onPartial: (partial) {
+          _partialSpeechText = partial;
+          _safeNotify();
+        },
+        onFinal: (finalText) {
+          _isListening = false;
+          _partialSpeechText = '';
+          _safeNotify();
+          sendText(finalText, source: TxSource.voice);
+        },
+        onError: (error) {
+          _isListening = false;
+          _partialSpeechText = '';
+          _errorMessage = error.userMessage;
+          _safeNotify();
+        },
+      );
+    } finally {
+      _isStartingVoice = false;
+    }
 
     if (startError != null) {
       _isListening = false;

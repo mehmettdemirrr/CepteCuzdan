@@ -272,7 +272,23 @@ String? _parseOptionalString(Object? raw) {
   if (!_isoDatePattern.hasMatch(s)) return (normalizedToday, true);
   try {
     final parsed = fromDbDate(s);
-    return (DateTime(parsed.year, parsed.month, parsed.day), false);
+    final date = DateTime(parsed.year, parsed.month, parsed.day);
+    // OCR yanlış okuması ("2062", "2019") makul aralık dışındaysa bugün
+    // kullanılır ve kartta uyarı gösterilir: en fazla 5 yıl önce, en geç yarın.
+    final earliest = DateTime(
+      normalizedToday.year - 5,
+      normalizedToday.month,
+      normalizedToday.day,
+    );
+    final latest = DateTime(
+      normalizedToday.year,
+      normalizedToday.month,
+      normalizedToday.day + 1,
+    );
+    if (date.isBefore(earliest) || date.isAfter(latest)) {
+      return (normalizedToday, true);
+    }
+    return (date, false);
   } on FormatException {
     return (normalizedToday, true);
   }

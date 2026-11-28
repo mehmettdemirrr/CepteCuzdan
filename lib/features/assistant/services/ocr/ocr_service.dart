@@ -96,7 +96,13 @@ class DeviceReceiptImagePicker implements ReceiptImagePicker {
       final imageSource = source == ReceiptImageSource.camera
           ? ImageSource.camera
           : ImageSource.gallery;
-      final file = await _picker.pickImage(source: imageSource);
+      // OCR için 2000 px yeterli; tam çözünürlük (birkaç MB) saklanmaz.
+      final file = await _picker.pickImage(
+        source: imageSource,
+        maxWidth: 2000,
+        maxHeight: 2000,
+        imageQuality: 85,
+      );
       return file?.path;
     } on PlatformException catch (e) {
       debugPrint('DeviceReceiptImagePicker: PlatformException (${e.code})');
