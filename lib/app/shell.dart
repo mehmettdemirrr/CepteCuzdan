@@ -28,6 +28,11 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   int _index = 0;
 
+  /// Telefon yan çevrilince sayfalar alt gezinmeli düzenden yan gezinmeli
+  /// düzene taşınır; anahtar sayesinde durumlarını (yazılan metin, kaydırma
+  /// konumu) kaybetmezler.
+  final _pagesKey = GlobalKey();
+
   void _select(int index) => setState(() => _index = index);
 
   static const _items = [
@@ -39,7 +44,11 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final pages = IndexedStack(index: _index, children: widget.pages);
+    final pages = IndexedStack(
+      key: _pagesKey,
+      index: _index,
+      children: widget.pages,
+    );
 
     if (!isWide(context)) {
       return Scaffold(

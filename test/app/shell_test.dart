@@ -6,6 +6,7 @@ import '../helpers/screen_matrix.dart';
 
 void main() {
   responsiveShellTests();
+  rotationStateTest();
 
   testWidgets('kabuk 4 sekmeyi gösterir ve sekme değiştirir', (t) async {
     await t.pumpWidget(
@@ -144,5 +145,28 @@ void responsiveShellTests() {
       find.byKey(const Key('tab-transactions')).hitTestable(),
       findsOneWidget,
     );
+  });
+}
+
+void rotationStateTest() {
+  testWidgets('telefon yan çevrilince sayfaların durumu korunur', (t) async {
+    _setScreen(t, ScreenCase.phone);
+    await t.pumpWidget(
+      const MaterialApp(
+        home: AppShell(
+          pages: [
+            Material(child: TextField(key: Key('draft'))),
+            SizedBox(),
+            SizedBox(),
+            SizedBox(),
+          ],
+        ),
+      ),
+    );
+    await t.enterText(find.byKey(const Key('draft')), 'Migros 320');
+    _setScreen(t, ScreenCase.landscape);
+    await t.pumpAndSettle();
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.text('Migros 320'), findsOneWidget);
   });
 }
