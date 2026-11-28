@@ -141,88 +141,93 @@ class _AssistantScreenState extends State<AssistantScreen> {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 840),
-            child: Column(
-              children: [
-                if (controller.isBusy) const LinearProgressIndicator(),
-                Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final messageArea =
-                          controller.isLoadingHistory && messages.isEmpty
-                          ? const Center(child: CircularProgressIndicator())
-                          : messages.isEmpty
-                          ? const _EmptyAssistantView()
-                          : ListView.builder(
-                              controller: _scrollController,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
+            // Gövdenin gerçek yüksekliği: yatay ekran + büyük yazıda hata
+            // bandı bu yüksekliğe göre sınırlanır (bant kendi içinde kayar).
+            child: LayoutBuilder(
+              builder: (context, body) => Column(
+                children: [
+                  if (controller.isBusy) const LinearProgressIndicator(),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final messageArea =
+                            controller.isLoadingHistory && messages.isEmpty
+                            ? const Center(child: CircularProgressIndicator())
+                            : messages.isEmpty
+                            ? const _EmptyAssistantView()
+                            : ListView.builder(
+                                controller: _scrollController,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                itemCount: messages.length,
+                                itemBuilder: (context, index) =>
+                                    _MessageBubble(message: messages[index]),
+                              );
+
+                        final pending = controller.pendingDraft;
+                        if (pending == null) return messageArea;
+
+                        final avail = constraints.maxHeight;
+                        // Yatay/küçük ekranda onay kartı kullanılabilir alanın
+                        // üst sınırını aşmaz; mesaj alanı kalan yüksekliği alır.
+                        final cardMaxHeight = avail < 140
+                            ? avail
+                            : (avail * (avail < 280 ? 0.72 : 0.62)).clamp(
+                                0.0,
+                                360.0,
+                              );
+
+                        return Column(
+                          children: [
+                            if (avail >= 140) Expanded(child: messageArea),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: cardMaxHeight,
                               ),
-                              itemCount: messages.length,
-                              itemBuilder: (context, index) =>
-                                  _MessageBubble(message: messages[index]),
-                            );
-
-                      final pending = controller.pendingDraft;
-                      if (pending == null) return messageArea;
-
-                      final avail = constraints.maxHeight;
-                      // Yatay/küçük ekranda onay kartı kullanılabilir alanın
-                      // üst sınırını aşmaz; mesaj alanı kalan yüksekliği alır.
-                      final cardMaxHeight = avail < 140
-                          ? avail
-                          : (avail * (avail < 280 ? 0.72 : 0.62)).clamp(
-                              0.0,
-                              360.0,
-                            );
-
-                      return Column(
-                        children: [
-                          if (avail >= 140) Expanded(child: messageArea),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxHeight: cardMaxHeight,
+                              child: ConfirmationCard(
+                                pending: pending,
+                                isSaving: controller.isSavingDraft,
+                                saveErrorMessage: controller.saveErrorMessage,
+                                currencyStyle: controller.currencyStyle,
+                                onSave: _handleSavePendingDraft,
+                                onEdit: _handleEditPendingDraft,
+                                onCancel: controller.clearPendingDraft,
+                              ),
                             ),
-                            child: ConfirmationCard(
-                              pending: pending,
-                              isSaving: controller.isSavingDraft,
-                              saveErrorMessage: controller.saveErrorMessage,
-                              currencyStyle: controller.currencyStyle,
-                              onSave: _handleSavePendingDraft,
-                              onEdit: _handleEditPendingDraft,
-                              onCancel: controller.clearPendingDraft,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                          ],
+                        );
+                      },
+                    ),
                   ),
-                ),
-                if (controller.isListening)
-                  _VoiceListeningBanner(
-                    partialText: controller.partialSpeechText,
-                    onStop: controller.toggleVoiceInput,
-                    onCancel: controller.cancelVoiceInput,
+                  if (controller.isListening)
+                    _VoiceListeningBanner(
+                      partialText: controller.partialSpeechText,
+                      onStop: controller.toggleVoiceInput,
+                      onCancel: controller.cancelVoiceInput,
+                    ),
+                  if (controller.errorMessage != null)
+                    _ErrorBanner(
+                      message: controller.errorMessage!,
+                      canRetry: controller.canRetry && !controller.isBusy,
+                      onRetry: controller.retryLast,
+                      onManualAdd: () =>
+                          AppShell.selectTab(context, AppShell.transactionsTab),
+                      onDismiss: controller.clearError,
+                      availableHeight: body.maxHeight,
+                    ),
+                  _InputBar(
+                    controller: _inputController,
+                    isBusy: controller.isBusy,
+                    isListening: controller.isListening,
+                    hasVoiceSupport: controller.hasVoiceSupport,
+                    onSend: _handleSend,
+                    onCameraTap: _showReceiptSourceSheet,
+                    onMicTap: controller.toggleVoiceInput,
                   ),
-                if (controller.errorMessage != null)
-                  _ErrorBanner(
-                    message: controller.errorMessage!,
-                    canRetry: controller.canRetry && !controller.isBusy,
-                    onRetry: controller.retryLast,
-                    onManualAdd: () =>
-                        AppShell.selectTab(context, AppShell.transactionsTab),
-                    onDismiss: controller.clearError,
-                  ),
-                _InputBar(
-                  controller: _inputController,
-                  isBusy: controller.isBusy,
-                  isListening: controller.isListening,
-                  hasVoiceSupport: controller.hasVoiceSupport,
-                  onSend: _handleSend,
-                  onCameraTap: _showReceiptSourceSheet,
-                  onMicTap: controller.toggleVoiceInput,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -347,6 +352,7 @@ class _ErrorBanner extends StatelessWidget {
     required this.onRetry,
     required this.onManualAdd,
     required this.onDismiss,
+    this.availableHeight,
   });
 
   final String message;
@@ -355,14 +361,19 @@ class _ErrorBanner extends StatelessWidget {
   final VoidCallback onManualAdd;
   final VoidCallback onDismiss;
 
+  /// Asistan gövdesinin yüksekliği; bant bunun en fazla dörtte birini alır.
+  final double? availableHeight;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final maxBannerHeight = MediaQuery.sizeOf(context).height < 480
-        ? 112.0
-        : 180.0;
+    final defaultMax = MediaQuery.sizeOf(context).height < 480 ? 112.0 : 180.0;
+    final available = availableHeight;
+    final maxBannerHeight = available == null || !available.isFinite
+        ? defaultMax
+        : (available * 0.25).clamp(48.0, defaultMax);
 
     return Material(
       color: scheme.errorContainer,

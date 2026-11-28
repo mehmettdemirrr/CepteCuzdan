@@ -135,12 +135,16 @@ class BudgetQueryService {
     return '${period.label} toplam ${fmt(summary.expenseTotal)} harcadınız.';
   }
 
+  static final _todayWord = RegExp(r'\bbu ?gun(ku|un|e)?\b');
+  static final _yesterdayWord = RegExp(r'\bdun(ku|un|e|den)?\b');
+
   _ParsedPeriod _parsePeriod(String folded, DateTime now) {
     final today = DateTime(now.year, now.month, now.day);
-    if (folded.contains('bugun')) {
+    // Tam kelime eşleşmesi: "dünya" "dün" sayılmaz; "bu gün", "dünkü" tanınır.
+    if (_todayWord.hasMatch(folded)) {
       return _ParsedPeriod('Bugün', DateRange(today, today));
     }
-    if (folded.contains('dun')) {
+    if (_yesterdayWord.hasMatch(folded)) {
       final yesterday = today.subtract(const Duration(days: 1));
       return _ParsedPeriod('Dün', DateRange(yesterday, yesterday));
     }
