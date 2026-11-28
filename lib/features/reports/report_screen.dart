@@ -6,6 +6,7 @@ import '../../core/format/dates.dart';
 import '../../core/models/enums.dart';
 import '../../core/ui/app_theme.dart';
 import '../../core/ui/category_icons.dart';
+import '../../core/ui/responsive.dart';
 import '../../core/ui/widgets/amount_text.dart';
 import '../../core/ui/widgets/category_avatar.dart';
 import '../../core/ui/widgets/empty_state.dart';
@@ -67,139 +68,156 @@ class ReportScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          SegmentedButton<ReportPeriod>(
-            showSelectedIcon: false,
-            segments: const [
-              ButtonSegment(value: ReportPeriod.week, label: Text('Haftalık')),
-              ButtonSegment(value: ReportPeriod.month, label: Text('Aylık')),
-              ButtonSegment(value: ReportPeriod.custom, label: Text('Özel')),
-            ],
-            selected: {p.period},
-            onSelectionChanged: (s) {
-              if (s.first == ReportPeriod.custom) {
-                _pickCustom(context, p);
-              } else {
-                p.setPeriod(s.first);
-              }
-            },
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              IconButton(
-                key: const Key('report-prev'),
-                tooltip: 'Önceki dönem',
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () => p.shift(-1),
-              ),
-              Expanded(
-                // Özel dönemde "Özel" düğmesi tekrar basılınca tetiklenmediği
-                // için aralık etiketine dokunarak yeni aralık seçilir.
-                child: InkWell(
-                  key: const Key('report-range'),
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: isCustom ? () => _pickCustom(context, p) : null,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            rangeLabel(p.range, p.period),
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.titleMedium,
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            SegmentedButton<ReportPeriod>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(
+                  value: ReportPeriod.week,
+                  label: Text('Haftalık'),
+                ),
+                ButtonSegment(value: ReportPeriod.month, label: Text('Aylık')),
+                ButtonSegment(value: ReportPeriod.custom, label: Text('Özel')),
+              ],
+              selected: {p.period},
+              onSelectionChanged: (s) {
+                if (s.first == ReportPeriod.custom) {
+                  _pickCustom(context, p);
+                } else {
+                  p.setPeriod(s.first);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                IconButton(
+                  key: const Key('report-prev'),
+                  tooltip: 'Önceki dönem',
+                  icon: const Icon(Icons.chevron_left),
+                  onPressed: () => p.shift(-1),
+                ),
+                Expanded(
+                  // Özel dönemde "Özel" düğmesi tekrar basılınca tetiklenmediği
+                  // için aralık etiketine dokunarak yeni aralık seçilir.
+                  child: InkWell(
+                    key: const Key('report-range'),
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: isCustom ? () => _pickCustom(context, p) : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              rangeLabel(p.range, p.period),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
                           ),
-                        ),
-                        if (isCustom) ...[
-                          const SizedBox(width: 6),
-                          const Icon(Icons.edit_calendar, size: 18),
+                          if (isCustom) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.edit_calendar, size: 18),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              IconButton(
-                key: const Key('report-next'),
-                tooltip: 'Sonraki dönem',
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () => p.shift(1),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<int?>(
-            // Değer dışarıdan değişince (filtre temizlendi) alan yenilensin.
-            key: ValueKey('report-category-$selectedCategory'),
-            initialValue: selectedCategory,
-            decoration: const InputDecoration(
-              labelText: 'Kategori',
-              isDense: true,
-            ),
-            items: [
-              const DropdownMenuItem(
-                value: null,
-                child: Text('Tüm kategoriler'),
-              ),
-              for (final c in categories)
-                DropdownMenuItem(value: c.id, child: Text(c.name)),
-            ],
-            onChanged: p.setCategory,
-          ),
-          const SizedBox(height: 16),
-          if (data == null && p.error != null)
-            EmptyState(
-              icon: Icons.error_outline,
-              message: 'Veriler yüklenemedi',
-              action: FilledButton(
-                onPressed: p.load,
-                child: const Text('Tekrar dene'),
-              ),
-            )
-          else if (data == null)
-            const Padding(
-              padding: EdgeInsets.all(32),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else ...[
-            _TotalsCard(data: data),
-            const SizedBox(height: 12),
-            if (data.rows.isEmpty)
-              const Card(
-                child: EmptyState(
-                  icon: Icons.bar_chart,
-                  message: 'Bu dönemde harcama yok',
+                IconButton(
+                  key: const Key('report-next'),
+                  tooltip: 'Sonraki dönem',
+                  icon: const Icon(Icons.chevron_right),
+                  onPressed: () => p.shift(1),
                 ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<int?>(
+              // Değer dışarıdan değişince (filtre temizlendi) alan yenilensin.
+              key: ValueKey('report-category-$selectedCategory'),
+              initialValue: selectedCategory,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Kategori',
+                isDense: true,
+              ),
+              items: [
+                const DropdownMenuItem(
+                  value: null,
+                  child: Text('Tüm kategoriler'),
+                ),
+                for (final c in categories)
+                  DropdownMenuItem(value: c.id, child: Text(c.name)),
+              ],
+              onChanged: p.setCategory,
+            ),
+            const SizedBox(height: 16),
+            if (data == null && p.error != null)
+              EmptyState(
+                icon: Icons.error_outline,
+                message: 'Veriler yüklenemedi',
+                action: FilledButton(
+                  onPressed: p.load,
+                  child: const Text('Tekrar dene'),
+                ),
+              )
+            else if (data == null)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
               )
             else ...[
-              _ComparisonChart(data: data),
+              _TotalsCard(data: data),
               const SizedBox(height: 12),
-              _Breakdown(data: data),
-            ],
-            const SizedBox(height: 16),
-            Text('Döküm', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            if (data.transactions.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Bu dönemde işlem yok'),
-              )
-            else
-              for (final tx in data.transactions)
-                TransactionTile(
-                  tx: tx,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => TransactionFormScreen(initial: tx),
+              if (data.rows.isEmpty)
+                const Card(
+                  child: EmptyState(
+                    icon: Icons.bar_chart,
+                    message: 'Bu dönemde harcama yok',
+                  ),
+                )
+              else if (isWide(context))
+                // Geniş ekran ve yatay telefon: grafik ve kategori dökümü yan yana.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(child: _ComparisonChart(data: data)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _Breakdown(data: data)),
+                  ],
+                )
+              else ...[
+                _ComparisonChart(data: data),
+                const SizedBox(height: 12),
+                _Breakdown(data: data),
+              ],
+              const SizedBox(height: 16),
+              Text('Döküm', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 4),
+              if (data.transactions.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('Bu dönemde işlem yok'),
+                )
+              else
+                for (final tx in data.transactions)
+                  TransactionTile(
+                    tx: tx,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => TransactionFormScreen(initial: tx),
+                      ),
                     ),
                   ),
-                ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

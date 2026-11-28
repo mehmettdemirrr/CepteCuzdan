@@ -20,20 +20,25 @@ class _CategoryPieCard extends StatelessWidget {
     final entries = data.summary.expenseByCategory.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final theme = Theme.of(context);
+    // Yatay ekranda grafik küçülür (dikey 200 → yatay 144 dp); halka
+    // kalınlığı ve ortadaki boşluk yükseklikle orantılı.
+    final height = chartHeight(context, max: 180);
+    final ring = height * 0.2;
+    final hole = height * 0.29;
 
     return _Section(
       title: 'Harcama dağılımı',
       child: Column(
         children: [
           SizedBox(
-            height: 180,
+            height: height,
             child: Stack(
               alignment: Alignment.center,
               children: [
                 PieChart(
                   PieChartData(
                     sectionsSpace: 2,
-                    centerSpaceRadius: 52,
+                    centerSpaceRadius: hole,
                     sections: [
                       for (final e in entries)
                         PieChartSectionData(
@@ -41,7 +46,7 @@ class _CategoryPieCard extends StatelessWidget {
                           color: Color(
                             categories.byId(e.key)?.color ?? 0xFF9E9E9E,
                           ),
-                          radius: 36,
+                          radius: ring,
                           title: e.value / total >= 0.08
                               ? '%${(e.value * 100 / total).round()}'
                               : '',
@@ -79,15 +84,28 @@ class _CategoryPieCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // Dar ekranda / büyük yazıda yüzde ve tutar alt satıra iner.
                   Expanded(
-                    child: Text(categories.byId(e.key)?.name ?? 'Kategori'),
+                    child: Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 12,
+                      children: [
+                        Text(categories.byId(e.key)?.name ?? 'Kategori'),
+                        Wrap(
+                          spacing: 12,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Text(
+                              '%${(e.value * 100 / total).round()}',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            AmountText(e.value),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(
-                    '%${(e.value * 100 / total).round()}',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const SizedBox(width: 12),
-                  AmountText(e.value),
                 ],
               ),
             ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ui/responsive.dart';
+
 import '../../core/format/money.dart';
 import '../transactions/category_management_screen.dart';
 import '../transactions/category_provider.dart';
@@ -78,77 +80,86 @@ class SettingsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ayarlar')),
-      body: ListView(
-        children: [
-          group(
-            'Tema',
-            SegmentedButton<ThemeMode>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(value: ThemeMode.system, label: Text('Sistem')),
-                ButtonSegment(value: ThemeMode.light, label: Text('Açık')),
-                ButtonSegment(value: ThemeMode.dark, label: Text('Koyu')),
-              ],
-              selected: {settings.themeMode},
-              onSelectionChanged: (s) => settings.setThemeMode(s.first),
-            ),
-          ),
-          group(
-            'Tutar görünümü',
-            SegmentedButton<CurrencyStyle>(
-              showSelectedIcon: false,
-              segments: const [
-                ButtonSegment(
-                  value: CurrencyStyle.symbol,
-                  label: Text('₺1.234,50'),
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          maxWidth: kMaxFormWidth,
+          child: ListView(
+            children: [
+              group(
+                'Tema',
+                SegmentedButton<ThemeMode>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: ThemeMode.system,
+                      label: Text('Sistem'),
+                    ),
+                    ButtonSegment(value: ThemeMode.light, label: Text('Açık')),
+                    ButtonSegment(value: ThemeMode.dark, label: Text('Koyu')),
+                  ],
+                  selected: {settings.themeMode},
+                  onSelectionChanged: (s) => settings.setThemeMode(s.first),
                 ),
-                ButtonSegment(
-                  value: CurrencyStyle.code,
-                  label: Text('1.234,50 TL'),
+              ),
+              group(
+                'Tutar görünümü',
+                SegmentedButton<CurrencyStyle>(
+                  showSelectedIcon: false,
+                  segments: const [
+                    ButtonSegment(
+                      value: CurrencyStyle.symbol,
+                      label: Text('₺1.234,50'),
+                    ),
+                    ButtonSegment(
+                      value: CurrencyStyle.code,
+                      label: Text('1.234,50 TL'),
+                    ),
+                  ],
+                  selected: {settings.currencyStyle},
+                  onSelectionChanged: (s) => settings.setCurrencyStyle(s.first),
                 ),
-              ],
-              selected: {settings.currencyStyle},
-              onSelectionChanged: (s) => settings.setCurrencyStyle(s.first),
-            ),
-          ),
-          const Divider(height: 32),
-          ListTile(
-            leading: const Icon(Icons.savings_outlined),
-            title: const Text('Bütçe limitleri'),
-            subtitle: const Text('Aylık genel bütçe ve kategori limitleri'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const BudgetSettingsScreen(),
               ),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.category_outlined),
-            title: const Text('Kategoriler'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => const CategoryManagementScreen(),
+              const Divider(height: 32),
+              ListTile(
+                leading: const Icon(Icons.savings_outlined),
+                title: const Text('Bütçe limitleri'),
+                subtitle: const Text('Aylık genel bütçe ve kategori limitleri'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const BudgetSettingsScreen(),
+                  ),
+                ),
               ),
-            ),
+              ListTile(
+                leading: const Icon(Icons.category_outlined),
+                title: const Text('Kategoriler'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const CategoryManagementScreen(),
+                  ),
+                ),
+              ),
+              const Divider(height: 32),
+              ListTile(
+                leading: Icon(
+                  Icons.delete_forever_outlined,
+                  color: theme.colorScheme.error,
+                ),
+                title: Text(
+                  'Verileri sıfırla',
+                  style: TextStyle(color: theme.colorScheme.error),
+                ),
+                subtitle: const Text(
+                  'İşlemler, bütçeler ve sohbet geçmişi silinir',
+                ),
+                onTap: () => _reset(context),
+              ),
+            ],
           ),
-          const Divider(height: 32),
-          ListTile(
-            leading: Icon(
-              Icons.delete_forever_outlined,
-              color: theme.colorScheme.error,
-            ),
-            title: Text(
-              'Verileri sıfırla',
-              style: TextStyle(color: theme.colorScheme.error),
-            ),
-            subtitle: const Text(
-              'İşlemler, bütçeler ve sohbet geçmişi silinir',
-            ),
-            onTap: () => _reset(context),
-          ),
-        ],
+        ),
       ),
     );
   }

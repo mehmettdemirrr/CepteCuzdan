@@ -16,8 +16,11 @@ bool isWide(BuildContext context) =>
 
 /// Grafik yüksekliği: ekran yüksekliğinin %40'ı, [min]–[max] arasında.
 /// Dikey 800 dp → 200, yatay 360 dp → 144.
-double chartHeight(BuildContext context, {double max = 200, double min = 120}) =>
-    (MediaQuery.sizeOf(context).height * 0.4).clamp(min, max);
+double chartHeight(
+  BuildContext context, {
+  double max = 200,
+  double min = 120,
+}) => (MediaQuery.sizeOf(context).height * 0.4).clamp(min, max);
 
 /// İçeriği [maxWidth] ile sınırlayıp yatayda ortalar. Dar ekranda tam
 /// genişlik kullanılır.

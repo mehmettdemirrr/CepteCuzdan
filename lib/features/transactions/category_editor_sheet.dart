@@ -17,6 +17,8 @@ Future<void> showCategoryEditor(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
+    // Yatayda çentik ve durum çubuğu altına girmesin.
+    useSafeArea: true,
     builder: (_) => CategoryEditorSheet(type: type, initial: initial),
   );
 }

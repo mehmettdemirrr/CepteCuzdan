@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/ui/responsive.dart';
+
 import '../../core/models/transaction_record.dart';
 import '../../core/ui/widgets/empty_state.dart';
 import 'category_management_screen.dart';
@@ -86,24 +88,29 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
         icon: const Icon(Icons.add),
         label: const Text('İşlem ekle'),
       ),
-      body: FutureBuilder<List<TransactionRecord>>(
-        future: _future,
-        builder: (context, snap) {
-          if (snap.hasData) _last = snap.data;
-          final list = (snap.data ?? _last)
-              ?.where((t) => !_dismissed.contains(t.id))
-              .toList();
-          if (list == null) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (list.isEmpty) {
-            return const EmptyState(
-              icon: Icons.receipt_long_outlined,
-              message: 'Henüz işlem yok',
-            );
-          }
-          return _buildList(list);
-        },
+      body: SafeArea(
+        top: false,
+        child: ContentWidth(
+          child: FutureBuilder<List<TransactionRecord>>(
+            future: _future,
+            builder: (context, snap) {
+              if (snap.hasData) _last = snap.data;
+              final list = (snap.data ?? _last)
+                  ?.where((t) => !_dismissed.contains(t.id))
+                  .toList();
+              if (list == null) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (list.isEmpty) {
+                return const EmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  message: 'Henüz işlem yok',
+                );
+              }
+              return _buildList(list);
+            },
+          ),
+        ),
       ),
     );
   }

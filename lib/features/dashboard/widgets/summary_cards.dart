@@ -139,7 +139,13 @@ class _IncomeExpenseRow extends StatelessWidget {
               children: [
                 Icon(icon, size: 18, color: color),
                 const SizedBox(width: 6),
-                Text(label, style: Theme.of(context).textTheme.labelLarge),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 6),
@@ -156,25 +162,30 @@ class _IncomeExpenseRow extends StatelessWidget {
         ),
       ),
     );
+    final income = tile(
+      'Gelir',
+      data.summary.incomeTotal,
+      money.income,
+      Icons.arrow_downward,
+    );
+    final expense = tile(
+      'Gider',
+      data.summary.expenseTotal,
+      money.expense,
+      Icons.arrow_upward,
+    );
+    // Büyük yazıda yan yana sığmaz: alt alta.
+    if (MediaQuery.textScalerOf(context).scale(1) >= 1.5) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [income, const SizedBox(height: 12), expense],
+      );
+    }
     return Row(
       children: [
-        Expanded(
-          child: tile(
-            'Gelir',
-            data.summary.incomeTotal,
-            money.income,
-            Icons.arrow_downward,
-          ),
-        ),
+        Expanded(child: income),
         const SizedBox(width: 12),
-        Expanded(
-          child: tile(
-            'Gider',
-            data.summary.expenseTotal,
-            money.expense,
-            Icons.arrow_upward,
-          ),
-        ),
+        Expanded(child: expense),
       ],
     );
   }

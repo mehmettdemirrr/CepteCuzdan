@@ -26,7 +26,7 @@ class _ComparisonChart extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 200,
+              height: chartHeight(context),
               child: BarChart(
                 BarChartData(
                   alignment: BarChartAlignment.spaceAround,
@@ -108,7 +108,9 @@ class _Legend extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
+        Flexible(
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
       ],
     );
   }

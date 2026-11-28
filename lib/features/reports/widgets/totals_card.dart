@@ -35,39 +35,41 @@ class _TotalsCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        // Büyük yazıda / dar ekranda Gelir alt satıra iner.
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          spacing: 16,
+          runSpacing: 12,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Toplam gider', style: theme.textTheme.labelLarge),
-                  const SizedBox(height: 4),
-                  AmountText(
-                    data.currentTotal,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: money.expense,
-                    ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Toplam gider', style: theme.textTheme.labelLarge),
+                const SizedBox(height: 4),
+                AmountText(
+                  data.currentTotal,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: money.expense,
                   ),
-                  const SizedBox(height: 2),
-                  if (data.currentTotal > 0 || data.previousTotal > 0)
-                    Wrap(
-                      spacing: 4,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        ChangeBadge(data.totalChange),
-                        Text(
-                          'önceki döneme göre',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 2),
+                if (data.currentTotal > 0 || data.previousTotal > 0)
+                  Wrap(
+                    spacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      ChangeBadge(data.totalChange),
+                      Text(
+                        'önceki döneme göre',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+              ],
             ),
             if (data.categoryId == null)
               Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Gelir', style: theme.textTheme.labelLarge),
                   const SizedBox(height: 4),
