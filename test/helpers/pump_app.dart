@@ -10,6 +10,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../fakes/fake_alert_notifier.dart';
 import '../fakes/fake_repositories.dart';
+import 'screen_matrix.dart';
+
+export 'screen_matrix.dart';
 
 /// Widget testleri için sahte bağımlılıklar.
 class TestDeps {
@@ -48,15 +51,35 @@ class TestDeps {
 
 /// [child]'ı uygulamanın teması ve Türkçe yerelleştirmesiyle sarar. [deps]
 /// verilirse uygulamanın provider ağacı sahte repository'lerle kurulur.
-Future<void> pumpApp(WidgetTester t, Widget child, {TestDeps? deps}) async {
-  // Gerçekçi telefon ekranı: 360×800 mantıksal piksel.
-  t.view.physicalSize = const Size(1080, 2400);
-  t.view.devicePixelRatio = 3;
+/// [screen] ekran boyutunu, yazı ölçeğini ve sistem paylarını belirler
+/// (varsayılan: 360×800 dikey telefon).
+Future<void> pumpApp(
+  WidgetTester t,
+  Widget child, {
+  TestDeps? deps,
+  ScreenCase screen = ScreenCase.phone,
+  ThemeMode themeMode = ThemeMode.light,
+}) async {
+  const dpr = 3.0;
+  t.view.physicalSize = screen.size * dpr;
+  t.view.devicePixelRatio = dpr;
+  final p = screen.padding * dpr;
+  t.view.padding = FakeViewPadding(
+    left: p.left,
+    top: p.top,
+    right: p.right,
+    bottom: p.bottom,
+  );
+  t.view.viewPadding = t.view.padding;
   addTearDown(t.view.reset);
+  t.platformDispatcher.textScaleFactorTestValue = screen.textScale;
+  addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
   await initializeDateFormatting('tr_TR');
   Intl.defaultLocale = 'tr_TR';
   Widget app = MaterialApp(
     theme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    themeMode: themeMode,
     locale: const Locale('tr', 'TR'),
     supportedLocales: const [Locale('tr', 'TR')],
     localizationsDelegates: const [

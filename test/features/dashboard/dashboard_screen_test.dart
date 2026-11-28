@@ -60,6 +60,8 @@ void main() {
     expect(find.text('₺380,00'), findsOneWidget); // kalan
     expect(find.byType(PieChart), findsOneWidget);
     expect(find.text('Gelirinin %12 kadarını harcadın'), findsOneWidget);
+    // Durum çubuğu payıyla son işlemler ilk ekranın altında kalır.
+    await t.scrollUntilVisible(find.text('Migros'), 200);
     expect(find.text('Migros'), findsOneWidget);
   });
 
